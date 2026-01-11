@@ -156,13 +156,17 @@ export async function proxy(request: NextRequest) {
         .eq('id', user.id)
         .single();
 
+      // Only redirect if user has a valid profile with a role
+      // If no profile exists, let them stay on login (they need onboarding)
       if (profile?.role === 'super_admin') {
         return NextResponse.redirect(new URL('/super-admin', request.url));
       } else if (profile?.role === 'member') {
         return NextResponse.redirect(new URL('/member', request.url));
-      } else {
+      } else if (profile?.role === 'gym_owner' || profile?.role === 'gym_staff') {
         return NextResponse.redirect(new URL('/owner', request.url));
       }
+      // If no profile or unknown role, don't redirect - let them see login/signup
+      // This prevents redirect loops for new users without profiles
     }
   }
 
