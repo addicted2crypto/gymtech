@@ -1,53 +1,143 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Main app domain - update this for production
-const MAIN_DOMAIN = process.env.NEXT_PUBLIC_APP_URL || 'localhost:3000';
-
-// Protected routes that require authentication
-const protectedRoutes = ['/owner', '/member', '/staff', '/super-admin'];
-
-// Auth routes (redirect if already logged in)
-const authRoutes = ['/login', '/signup', '/reset-password'];
+// Main platform domains - these should ALWAYS show the marketing site
+const PLATFORM_HOSTNAMES = [
+  'techforgyms.shop',
+  'www.techforgyms.shop',
+  'gymtech-delta.vercel.app',
+  'localhost',
+];
 
 export async function proxy(request: NextRequest) {
-  const hostname = request.headers.get('host') || '';
+  const hostname = request.headers.get('host')?.split(':')[0] || '';
   const pathname = request.nextUrl.pathname;
 
-  // Check if Supabase is configured
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const isSupabaseConfigured = supabaseUrl && supabaseAnonKey;
+  // ============================================
+  // CUSTOM DOMAIN / SUBDOMAIN ROUTING
+  // ============================================
+  const isPlatformDomain = PLATFORM_HOSTNAMES.includes(hostname);
 
-  // If Supabase is not configured, allow all routes (dev mode preview)
-  if (!isSupabaseConfigured) {
-    return NextResponse.next();
-  }
+  // If it's NOT the platform domain, route to gym landing page
+  if (!isPlatformDomain &&
+      !pathname.startsWith('/sites/') &&
+      !pathname.startsWith('/api/') &&
+      !pathname.startsWith('/_next/') &&
+      !pathname.startsWith('/login') &&
+      !pathname.startsWith('/signup')) {
 
-  // Update Supabase session (only if configured)
-  const { updateSession } = await import('@/lib/supabase/middleware');
-  const response = await updateSession(request);
+    const gymDomain = hostname.endsWith('.techforgyms.shop')
+      ? hostname.replace('.techforgyms.shop', '')
+      : hostname;
 
-  // Check if this is a custom gym domain
-  const isMainDomain = hostname.includes('localhost') ||
-                       hostname.includes(MAIN_DOMAIN) ||
-                       hostname.includes('vercel.app');
-
-  if (!isMainDomain) {
-    // This is a gym's custom domain - rewrite to /sites/[domain]
     const url = request.nextUrl.clone();
-    url.pathname = `/sites/${hostname}${pathname}`;
+    url.pathname = `/sites/${gymDomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // Handle protected routes - check for auth
-  if (protectedRoutes.some(route => pathname.startsWith(route))) {
-    // Check for auth cookie (Supabase stores session in cookies)
-    const authCookie = request.cookies.getAll().find(c =>
-      c.name.includes('sb-') && c.name.includes('-auth-token')
-    );
+  // ============================================
+  // SUPABASE SESSION HANDLING
+  // ============================================
+  let supabaseResponse = NextResponse.next({ request });
 
-    if (!authCookie) {
-      // No auth, redirect to login
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // If Supabase isn't configured, block protected routes
+  if (!supabaseUrl || !supabaseAnonKey) {
+    if (pathname.startsWith('/super-admin') ||
+        pathname.startsWith('/owner') ||
+        pathname.startsWith('/member') ||
+        pathname.startsWith('/api/admin')) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    return supabaseResponse;
+  }
+
+  const supabase = createServerClient(
+    supabaseUrl,
+    supabaseAnonKey,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Refresh session
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // ============================================
+  // SUPER ADMIN ROUTE PROTECTION
+  // ============================================
+  if (pathname.startsWith('/super-admin') || pathname.startsWith('/api/admin')) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile || profile.role !== 'super_admin') {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Forbidden: Super admin access required' },
+          { status: 403 }
+        );
+      }
+      const redirectPath = profile?.role === 'member' ? '/member' : '/owner';
+      return NextResponse.redirect(new URL(redirectPath, request.url));
+    }
+  }
+
+  // ============================================
+  // OWNER ROUTE PROTECTION
+  // ============================================
+  if (pathname.startsWith('/owner')) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/login';
+      url.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(url);
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    const allowedRoles = ['super_admin', 'gym_owner', 'gym_staff'];
+    if (!profile || !allowedRoles.includes(profile.role)) {
+      if (profile?.role === 'member') {
+        return NextResponse.redirect(new URL('/member', request.url));
+      }
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
+  // ============================================
+  // MEMBER ROUTE PROTECTION
+  // ============================================
+  if (pathname.startsWith('/member')) {
+    if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('redirect', pathname);
@@ -55,33 +145,32 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Handle auth routes - redirect if already logged in
-  if (authRoutes.some(route => pathname.startsWith(route))) {
-    const authCookie = request.cookies.getAll().find(c =>
-      c.name.includes('sb-') && c.name.includes('-auth-token')
-    );
+  // ============================================
+  // AUTH ROUTES - Redirect if already logged in
+  // ============================================
+  if (pathname === '/login' || pathname === '/signup') {
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
 
-    if (authCookie) {
-      // Already logged in, redirect to dashboard
-      const url = request.nextUrl.clone();
-      url.pathname = '/owner';
-      return NextResponse.redirect(url);
+      if (profile?.role === 'super_admin') {
+        return NextResponse.redirect(new URL('/super-admin', request.url));
+      } else if (profile?.role === 'member') {
+        return NextResponse.redirect(new URL('/member', request.url));
+      } else {
+        return NextResponse.redirect(new URL('/owner', request.url));
+      }
     }
   }
 
-  return response;
+  return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (images, etc.)
-     * - api routes (handled separately)
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };
