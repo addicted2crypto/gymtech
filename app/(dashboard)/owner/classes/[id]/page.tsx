@@ -140,13 +140,15 @@ export default function ClassDetailPage() {
       setSchedules(sched || []);
 
       // Fetch instructors (staff members)
-      const { data: staff } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('gym_id', gym?.id)
-        .in('role', ['gym_owner', 'gym_manager', 'gym_staff']);
+      if (gym?.id) {
+        const { data: staff } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .eq('gym_id', gym.id)
+          .in('role', ['gym_owner', 'gym_staff']);
 
-      setInstructors(staff || []);
+        setInstructors(staff || []);
+      }
       setLoading(false);
     };
 
@@ -197,7 +199,7 @@ export default function ClassDetailPage() {
   };
 
   const addSchedule = async () => {
-    if (!newSchedule.day_of_week === undefined || !newSchedule.start_time) return;
+    if (newSchedule.day_of_week === undefined || !newSchedule.start_time) return;
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -205,8 +207,8 @@ export default function ClassDetailPage() {
       // Demo mode
       const newSched: ClassSchedule = {
         id: `s${Date.now()}`,
-        day_of_week: newSchedule.day_of_week!,
-        start_time: newSchedule.start_time!,
+        day_of_week: newSchedule.day_of_week,
+        start_time: newSchedule.start_time,
         recurring: newSchedule.recurring ?? true,
         specific_date: null,
       };
@@ -257,7 +259,7 @@ export default function ClassDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -295,7 +297,7 @@ export default function ClassDetailPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
@@ -504,7 +506,7 @@ export default function ClassDetailPage() {
         <div className="pt-6 border-t border-white/10">
           <h3 className="text-sm font-medium text-gray-300 mb-4">Add Schedule</h3>
           <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-[150px]">
+            <div className="flex-1 min-w-37.5">
               <label className="block text-xs text-gray-500 mb-1">Day</label>
               <select
                 value={newSchedule.day_of_week}

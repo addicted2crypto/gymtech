@@ -20,6 +20,14 @@ export type CampaignChannel = 'email' | 'sms';
 
 export type SocialPlatform = 'instagram' | 'facebook' | 'tiktok' | 'youtube';
 
+export type FeatureRequestCategory = 'new_feature' | 'modification' | 'integration' | 'design' | 'bug_fix' | 'other';
+
+export type FeatureRequestPriority = 'normal' | 'urgent';
+
+export type FeatureRequestStatus = 'pending' | 'reviewing' | 'in_progress' | 'completed' | 'rejected';
+
+export type GymTier = 'starter' | 'pro' | 'enterprise';
+
 export interface Database {
   public: {
     Tables: {
@@ -32,6 +40,8 @@ export interface Database {
           custom_domain: string | null;
           domain_verified: boolean;
           stripe_account_id: string | null;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
           settings: Json;
           created_at: string;
           updated_at: string;
@@ -44,6 +54,8 @@ export interface Database {
           custom_domain?: string | null;
           domain_verified?: boolean;
           stripe_account_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
           settings?: Json;
           created_at?: string;
           updated_at?: string;
@@ -56,9 +68,12 @@ export interface Database {
           custom_domain?: string | null;
           domain_verified?: boolean;
           stripe_account_id?: string | null;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
           settings?: Json;
           updated_at?: string;
         };
+        Relationships: [];
       };
       gym_domains: {
         Row: {
@@ -85,6 +100,7 @@ export interface Database {
           verified_at?: string | null;
           ssl_provisioned?: boolean;
         };
+        Relationships: [];
       };
       profiles: {
         Row: {
@@ -96,9 +112,13 @@ export interface Database {
           avatar_url: string | null;
           email_encrypted: string | null;
           phone_encrypted: string | null;
+          member_number: string | null;
           login_streak: number;
           total_logins: number;
           loyalty_points: number;
+          class_streak: number;
+          is_trial: boolean;
+          notification_preferences: Json | null;
           last_login_at: string | null;
           created_at: string;
         };
@@ -111,9 +131,13 @@ export interface Database {
           avatar_url?: string | null;
           email_encrypted?: string | null;
           phone_encrypted?: string | null;
+          member_number?: string | null;
           login_streak?: number;
           total_logins?: number;
           loyalty_points?: number;
+          class_streak?: number;
+          is_trial?: boolean;
+          notification_preferences?: Json | null;
           last_login_at?: string | null;
           created_at?: string;
         };
@@ -125,11 +149,16 @@ export interface Database {
           avatar_url?: string | null;
           email_encrypted?: string | null;
           phone_encrypted?: string | null;
+          member_number?: string | null;
           login_streak?: number;
           total_logins?: number;
           loyalty_points?: number;
+          class_streak?: number;
+          is_trial?: boolean;
+          notification_preferences?: Json | null;
           last_login_at?: string | null;
         };
+        Relationships: [];
       };
       membership_plans: {
         Row: {
@@ -165,6 +194,7 @@ export interface Database {
           features?: Json;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       member_subscriptions: {
         Row: {
@@ -194,6 +224,7 @@ export interface Database {
           current_period_start?: string;
           current_period_end?: string;
         };
+        Relationships: [];
       };
       classes: {
         Row: {
@@ -235,6 +266,7 @@ export interface Database {
           image_url?: string | null;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       class_schedules: {
         Row: {
@@ -261,6 +293,7 @@ export interface Database {
           recurring?: boolean;
           specific_date?: string | null;
         };
+        Relationships: [];
       };
       class_bookings: {
         Row: {
@@ -283,6 +316,7 @@ export interface Database {
           status?: string;
           checked_in_at?: string | null;
         };
+        Relationships: [];
       };
       loyalty_rewards: {
         Row: {
@@ -315,6 +349,7 @@ export interface Database {
           discount_percent?: number | null;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       flash_sales: {
         Row: {
@@ -356,6 +391,7 @@ export interface Database {
           coupon_code?: string | null;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       landing_pages: {
         Row: {
@@ -388,6 +424,7 @@ export interface Database {
           meta_description?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       media_uploads: {
         Row: {
@@ -419,6 +456,7 @@ export interface Database {
           social_posted_to?: Json | null;
           coupon_code?: string | null;
         };
+        Relationships: [];
       };
       social_connections: {
         Row: {
@@ -449,6 +487,7 @@ export interface Database {
           account_name?: string;
           expires_at?: string | null;
         };
+        Relationships: [];
       };
       leads: {
         Row: {
@@ -490,6 +529,7 @@ export interface Database {
           converted_at?: string | null;
           assigned_to?: string | null;
         };
+        Relationships: [];
       };
       automated_campaigns: {
         Row: {
@@ -522,6 +562,7 @@ export interface Database {
           delay_hours?: number;
           is_active?: boolean;
         };
+        Relationships: [];
       };
       page_views: {
         Row: {
@@ -541,13 +582,359 @@ export interface Database {
           created_at?: string;
         };
         Update: never;
+        Relationships: [];
+      };
+      price_change_requests: {
+        Row: {
+          id: string;
+          gym_id: string;
+          plan_id: string;
+          current_price: number;
+          requested_price: number;
+          reason: string;
+          status: 'pending' | 'approved' | 'rejected';
+          requested_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          rejection_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          gym_id: string;
+          plan_id: string;
+          current_price: number;
+          requested_price: number;
+          reason: string;
+          status?: 'pending' | 'approved' | 'rejected';
+          requested_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          rejection_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: 'pending' | 'approved' | 'rejected';
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          rejection_reason?: string | null;
+        };
+        Relationships: [];
+      };
+      gym_addons: {
+        Row: {
+          id: string;
+          gym_id: string;
+          addon_id: string;
+          addon_name: string;
+          addon_category: string;
+          addon_tier: string;
+          is_enabled: boolean;
+          installed_by: string;
+          installed_at: string;
+          last_configured_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          gym_id: string;
+          addon_id: string;
+          addon_name: string;
+          addon_category: string;
+          addon_tier: string;
+          is_enabled?: boolean;
+          installed_by: string;
+          installed_at?: string;
+          last_configured_at?: string | null;
+        };
+        Update: {
+          is_enabled?: boolean;
+          last_configured_at?: string | null;
+        };
+        Relationships: [];
+      };
+      addon_configurations: {
+        Row: {
+          id: string;
+          gym_addon_id: string;
+          config: Json;
+          placements: Json;
+          updated_by: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          gym_addon_id: string;
+          config?: Json;
+          placements?: Json;
+          updated_by: string;
+          updated_at?: string;
+        };
+        Update: {
+          config?: Json;
+          placements?: Json;
+          updated_by?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      feature_requests: {
+        Row: {
+          id: string;
+          gym_id: string;
+          requested_by: string;
+          title: string;
+          description: string;
+          category: FeatureRequestCategory;
+          priority: FeatureRequestPriority;
+          status: FeatureRequestStatus;
+          sla_deadline: string;
+          sla_met: boolean | null;
+          reviewed_at: string | null;
+          started_at: string | null;
+          completed_at: string | null;
+          dev_notes: string | null;
+          assigned_to: string | null;
+          estimated_hours: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          gym_id: string;
+          requested_by: string;
+          title: string;
+          description: string;
+          category: FeatureRequestCategory;
+          priority?: FeatureRequestPriority;
+          status?: FeatureRequestStatus;
+          sla_deadline?: string;
+          sla_met?: boolean | null;
+          reviewed_at?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          dev_notes?: string | null;
+          assigned_to?: string | null;
+          estimated_hours?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: FeatureRequestStatus;
+          sla_met?: boolean | null;
+          reviewed_at?: string | null;
+          started_at?: string | null;
+          completed_at?: string | null;
+          dev_notes?: string | null;
+          assigned_to?: string | null;
+          estimated_hours?: number | null;
+        };
+        Relationships: [];
+      };
+      feature_request_attachments: {
+        Row: {
+          id: string;
+          request_id: string;
+          file_name: string;
+          file_url: string;
+          file_type: string | null;
+          file_size: number | null;
+          uploaded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          file_name: string;
+          file_url: string;
+          file_type?: string | null;
+          file_size?: number | null;
+          uploaded_by: string;
+          created_at?: string;
+        };
+        Update: {
+          file_name?: string;
+          file_url?: string;
+          file_type?: string | null;
+          file_size?: number | null;
+        };
+        Relationships: [];
+      };
+      feature_request_comments: {
+        Row: {
+          id: string;
+          request_id: string;
+          author_id: string;
+          author_name: string;
+          author_role: string;
+          content: string;
+          is_internal: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          author_id: string;
+          author_name: string;
+          author_role: string;
+          content: string;
+          is_internal?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          content?: string;
+          is_internal?: boolean;
+        };
+        Relationships: [];
+      };
+      coupons: {
+        Row: {
+          id: string;
+          gym_id: string;
+          code: string;
+          offer_type: string;
+          value: number;
+          valid_from: string;
+          valid_until: string;
+          max_uses: number | null;
+          current_uses: number;
+          created_by: string;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          gym_id: string;
+          code: string;
+          offer_type: string;
+          value?: number;
+          valid_from: string;
+          valid_until: string;
+          max_uses?: number | null;
+          current_uses?: number;
+          created_by: string;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          code?: string;
+          offer_type?: string;
+          value?: number;
+          valid_from?: string;
+          valid_until?: string;
+          max_uses?: number | null;
+          current_uses?: number;
+          is_active?: boolean;
+        };
+        Relationships: [];
+      };
+      message_queue: {
+        Row: {
+          id: string;
+          gym_id: string;
+          recipient_id: string;
+          channel: 'email' | 'sms';
+          subject: string | null;
+          content: string;
+          coupon_id: string | null;
+          status: 'pending' | 'sent' | 'failed';
+          scheduled_for: string | null;
+          sent_at: string | null;
+          error_message: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          gym_id: string;
+          recipient_id: string;
+          channel: 'email' | 'sms';
+          subject?: string | null;
+          content: string;
+          coupon_id?: string | null;
+          status?: 'pending' | 'sent' | 'failed';
+          scheduled_for?: string | null;
+          sent_at?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          status?: 'pending' | 'sent' | 'failed';
+          sent_at?: string | null;
+          error_message?: string | null;
+        };
+        Relationships: [];
+      };
+      message_campaigns: {
+        Row: {
+          id: string;
+          gym_id: string;
+          name: string;
+          channel: 'email' | 'sms' | 'both';
+          recipient_type: string;
+          subject: string | null;
+          content: string;
+          coupon_id: string | null;
+          total_recipients: number;
+          sent_count: number;
+          failed_count: number;
+          status: 'pending' | 'sending' | 'completed' | 'failed';
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          gym_id: string;
+          name: string;
+          channel: 'email' | 'sms' | 'both';
+          recipient_type: string;
+          subject?: string | null;
+          content: string;
+          coupon_id?: string | null;
+          total_recipients?: number;
+          sent_count?: number;
+          failed_count?: number;
+          status?: 'pending' | 'sending' | 'completed' | 'failed';
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          sent_count?: number;
+          failed_count?: number;
+          status?: 'pending' | 'sending' | 'completed' | 'failed';
+        };
+        Relationships: [];
       };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      submit_price_change_request: {
+        Args: {
+          p_plan_id: string;
+          p_new_price: number;
+          p_reason: string | null;
+        };
+        Returns: Json;
+      };
+      has_permission: {
+        Args: {
+          p_user_id: string;
+          p_permission: string;
+        };
+        Returns: boolean;
+      };
+      get_recipient_contact_info: {
+        Args: {
+          recipient_profile_id: string;
+        };
+        Returns: Json;
+      };
+      log_pii_access: {
+        Args: {
+          p_accessed_profile_id: string;
+          p_access_type: string;
+        };
+        Returns: void;
+      };
     };
     Enums: {
       user_role: UserRole;

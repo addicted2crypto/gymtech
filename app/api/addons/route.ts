@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import type { Json } from '@/types/database';
 
 // GET - Fetch installed add-ons for the gym
 export async function GET() {
@@ -255,19 +256,22 @@ export async function PATCH(request: NextRequest) {
         .single();
 
       if (gymAddon) {
-        const updateData: Record<string, unknown> = {
+        const upsertData: {
+          gym_addon_id: string;
+          updated_by: string;
+          config?: Json;
+          placements?: Json;
+        } = {
+          gym_addon_id: gymAddon.id,
           updated_by: authUser.id,
         };
 
-        if (config !== undefined) updateData.config = config;
-        if (placements !== undefined) updateData.placements = placements;
+        if (config !== undefined) upsertData.config = config as Json;
+        if (placements !== undefined) upsertData.placements = placements as Json;
 
         await supabase
           .from('addon_configurations')
-          .upsert({
-            gym_addon_id: gymAddon.id,
-            ...updateData,
-          });
+          .upsert(upsertData);
 
         // Update last_configured_at on main addon record
         await supabase

@@ -468,12 +468,18 @@ function BillingSection() {
   const success = searchParams.get('success');
 
   // Mock data - in production, fetch from API
-  const subscription = {
-    tier: 'pro' as const,
+  const subscription: {
+    tier: 'starter' | 'pro' | 'enterprise';
+    status: string;
+    currentPeriodEnd: string;
+    priceMonthly: number;
+    interval: 'monthly' | 'yearly';
+  } = {
+    tier: 'pro',
     status: 'active',
     currentPeriodEnd: '2024-02-15',
     priceMonthly: 149,
-    interval: 'monthly' as const,
+    interval: 'monthly',
   };
 
   const tierInfo = {

@@ -4,6 +4,45 @@ import { createClient } from '@/lib/supabase/server';
 type RequestCategory = 'new_feature' | 'modification' | 'integration' | 'design' | 'bug_fix' | 'other';
 type RequestPriority = 'normal' | 'urgent';
 
+interface FeatureRequestComment {
+  id: string;
+  author_name: string;
+  author_role: string;
+  content: string;
+  is_internal: boolean;
+  created_at: string;
+}
+
+interface FeatureRequestAttachment {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_type: string | null;
+  file_size: number | null;
+}
+
+interface FeatureRequestWithRelations {
+  id: string;
+  gym_id: string;
+  requested_by: string;
+  title: string;
+  description: string;
+  category: RequestCategory;
+  priority: RequestPriority;
+  status: string;
+  sla_deadline: string;
+  sla_met: boolean | null;
+  reviewed_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  dev_notes: string | null;
+  assigned_to: string | null;
+  estimated_hours: number | null;
+  created_at: string;
+  feature_request_attachments: FeatureRequestAttachment[];
+  feature_request_comments: FeatureRequestComment[];
+}
+
 interface CreateRequestBody {
   title: string;
   description: string;
@@ -41,7 +80,8 @@ export async function GET() {
     }
 
     // Fetch feature requests with attachments and comment counts
-    const { data: requests, error } = await supabase
+    // Note: Supabase detects relationships via foreign keys at runtime
+    const { data: rawRequests, error } = await supabase
       .from('feature_requests')
       .select(`
         *,
@@ -63,11 +103,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
     }
 
+    // Cast to expected type (Supabase handles joins at runtime)
+    const requests = rawRequests as unknown as FeatureRequestWithRelations[];
+
     // Filter out internal comments for non-super-admins
     const filteredRequests = requests?.map(req => ({
       ...req,
       feature_request_comments: req.feature_request_comments?.filter(
-        (comment: { is_internal: boolean }) => !comment.is_internal || profile.role === 'super_admin'
+        (comment) => !comment.is_internal || profile.role === 'super_admin'
       ),
     }));
 

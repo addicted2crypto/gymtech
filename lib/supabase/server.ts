@@ -10,6 +10,7 @@
  */
 
 import { createServerClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/supabase';
 
@@ -53,6 +54,22 @@ export async function createClient() {
         },
       },
     }
+  );
+}
+
+/**
+ * Create an untyped Supabase client for database operations
+ *
+ * The @supabase/ssr package has a TypeScript bug where all database
+ * operations (select/insert/update/delete) resolve parameter types to 'never'.
+ * This client uses the base package which doesn't have this issue.
+ *
+ * Note: This client doesn't handle cookies, so use createClient() for auth.
+ */
+export function createDbClient() {
+  return createSupabaseClient(
+    supabaseUrl!,
+    supabaseAnonKey!
   );
 }
 
@@ -257,5 +274,10 @@ export async function getMemberPII(
     p_access_type: accessType,
   });
 
-  return data?.[0] ?? null;
+  // The RPC returns contact info as JSON
+  const result = data as unknown;
+  if (Array.isArray(result) && result.length > 0) {
+    return result[0] as { email?: string; phone?: string } | null;
+  }
+  return result as { email?: string; phone?: string } | null;
 }

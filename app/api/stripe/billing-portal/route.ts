@@ -12,24 +12,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's profile and gym
+    // Get user's profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*, gyms(*)')
+      .select('gym_id, role')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile) {
+    if (profileError || !profile || !profile.gym_id) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    if (!profile.gyms?.stripe_customer_id) {
+    // Get gym's Stripe customer ID
+    const { data: gym, error: gymError } = await supabase
+      .from('gyms')
+      .select('stripe_customer_id')
+      .eq('id', profile.gym_id)
+      .single();
+
+    if (gymError || !gym?.stripe_customer_id) {
       return NextResponse.json({ error: 'No billing account found' }, { status: 400 });
     }
 
     // Create billing portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: profile.gyms.stripe_customer_id,
+      customer: gym.stripe_customer_id,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/owner/settings/billing`,
     });
 

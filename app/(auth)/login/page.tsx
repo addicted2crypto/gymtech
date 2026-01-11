@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient, createMutationClient } from '@/lib/supabase/client';
+import { createAuthClient, createClient } from '@/lib/supabase/client';
 import { ArrowRight } from 'lucide-react';
 
 function LoginForm() {
@@ -21,9 +21,12 @@ function LoginForm() {
     setError(null);
     setIsLoading(true);
 
-    const supabase = createClient();
+    // Use auth client for authentication (handles cookies properly)
+    const authClient = createAuthClient();
+    // Use typed client for database operations
+    const dbClient = createClient();
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await authClient.auth.signInWithPassword({
       email,
       password,
     });
@@ -35,10 +38,9 @@ function LoginForm() {
     }
 
     // Update login streak (handled by trigger, but we trigger it here)
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await authClient.auth.getUser();
     if (user) {
-      const mutationClient = createMutationClient();
-      await mutationClient
+      await dbClient
         .from('profiles')
         .update({ last_login_at: new Date().toISOString() })
         .eq('id', user.id);

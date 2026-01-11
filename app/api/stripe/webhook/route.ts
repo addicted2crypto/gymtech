@@ -78,13 +78,13 @@ export async function POST(request: NextRequest) {
       }
 
       case 'account.application.authorized': {
-        const account = event.data.object as Stripe.Account;
+        const account = event.data.object as unknown as Stripe.Account;
         console.log('Account authorized:', account.id);
         break;
       }
 
       case 'account.application.deauthorized': {
-        const account = event.data.object as Stripe.Account;
+        const account = event.data.object as unknown as Stripe.Account;
         console.log('Account deauthorized:', account.id);
 
         // Remove Stripe account ID from gym

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createAuthClient, createClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import {
   LayoutDashboard,
@@ -88,9 +88,13 @@ export default function DashboardLayout({
           avatar_url: null,
           email_encrypted: null,
           phone_encrypted: null,
+          member_number: 'DEMO-001',
           login_streak: 7,
           total_logins: 42,
           loyalty_points: 350,
+          class_streak: 5,
+          is_trial: false,
+          notification_preferences: null,
           last_login_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
         });
@@ -102,6 +106,8 @@ export default function DashboardLayout({
           custom_domain: null,
           domain_verified: false,
           stripe_account_id: null,
+          stripe_customer_id: null,
+          stripe_subscription_id: null,
           settings: {},
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -110,17 +116,20 @@ export default function DashboardLayout({
         return;
       }
 
-      const supabase = createClient();
+      // Use auth client for authentication (handles cookies properly)
+      const authClient = createAuthClient();
+      // Use typed client for database operations
+      const dbClient = createClient();
 
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await authClient.auth.getUser();
 
       if (!authUser) {
         router.push('/login');
         return;
       }
 
-      // Fetch profile
-      const { data: profile } = await supabase
+      // Fetch profile (use dbClient to avoid SSR type inference bug)
+      const { data: profile } = await dbClient
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
@@ -131,7 +140,7 @@ export default function DashboardLayout({
 
         // Fetch gym if user has one
         if (profile.gym_id) {
-          const { data: gymData } = await supabase
+          const { data: gymData } = await dbClient
             .from('gyms')
             .select('*')
             .eq('id', profile.gym_id)
@@ -150,8 +159,8 @@ export default function DashboardLayout({
   }, [router, setUser, setGym, setLoading]);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    const authClient = createAuthClient();
+    await authClient.auth.signOut();
     useAuthStore.getState().reset();
     router.push('/login');
   };

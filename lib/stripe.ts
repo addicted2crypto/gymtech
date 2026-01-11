@@ -3,7 +3,8 @@ import Stripe from 'stripe';
 // Initialize Stripe with the secret key
 // In production, this should only be used server-side
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
+  // Use the latest API version supported by the installed stripe package
+  apiVersion: '2025-02-24.acacia',
   typescript: true,
 });
 

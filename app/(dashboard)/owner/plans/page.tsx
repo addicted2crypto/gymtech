@@ -241,12 +241,12 @@ export default function PlansPage() {
       p_reason: priceReason || null,
     });
 
-    if (!error && data) {
+    if (!error && data && gym?.id) {
       // Refresh price requests
       const { data: requests } = await supabase
         .from('price_change_requests')
         .select('*')
-        .eq('gym_id', gym?.id)
+        .eq('gym_id', gym.id)
         .in('status', ['pending', 'rejected'])
         .order('requested_at', { ascending: false });
 
@@ -289,12 +289,17 @@ export default function PlansPage() {
       return;
     }
 
+    if (!gym?.id) {
+      setCreatingPlan(false);
+      return;
+    }
+
     const supabase = createClient();
 
     const { data, error } = await supabase
       .from('membership_plans')
       .insert({
-        gym_id: gym?.id,
+        gym_id: gym.id,
         name: newPlan.name,
         description: newPlan.description || null,
         price: priceInCents,
@@ -305,7 +310,11 @@ export default function PlansPage() {
       .single();
 
     if (!error && data) {
-      setPlans([...plans, { ...data, features: data.features || [] }].sort((a, b) => a.price - b.price));
+      const newPlanData: MembershipPlan = {
+        ...data,
+        features: (data.features as string[]) || [],
+      };
+      setPlans([...plans, newPlanData].sort((a, b) => a.price - b.price));
     }
 
     setCreatingPlan(false);
@@ -323,7 +332,7 @@ export default function PlansPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -341,7 +350,7 @@ export default function PlansPage() {
         </div>
         <button
           onClick={() => setShowNewPlanModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25"
         >
           <Plus className="w-5 h-5" />
           Add Plan
@@ -497,7 +506,7 @@ export default function PlansPage() {
           </p>
           <button
             onClick={() => setShowNewPlanModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all"
           >
             <Plus className="w-5 h-5" />
             Create Your First Plan
@@ -579,7 +588,7 @@ export default function PlansPage() {
               <button
                 onClick={submitPriceChange}
                 disabled={submittingPrice || !newPrice || parseFloat(newPrice) * 100 === selectedPlan.price}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submittingPrice ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -715,7 +724,7 @@ export default function PlansPage() {
               <button
                 onClick={createNewPlan}
                 disabled={creatingPlan || !newPlan.name.trim() || !newPlan.price}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {creatingPlan ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

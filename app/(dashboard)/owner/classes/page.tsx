@@ -169,7 +169,8 @@ export default function ClassesPage() {
         console.error('Error fetching classes:', error);
         setClasses(demoClasses);
       } else {
-        setClasses(data || []);
+        // Cast needed because relationship queries aren't fully typed in Database schema
+        setClasses((data || []) as unknown as ClassWithSchedules[]);
       }
 
       setLoading(false);
@@ -232,7 +233,7 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -250,7 +251,7 @@ export default function ClassesPage() {
         </div>
         <Link
           href="/owner/classes/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25"
         >
           <Plus className="w-5 h-5" />
           Add Class
@@ -309,7 +310,7 @@ export default function ClassesPage() {
           {!searchQuery && categoryFilter === 'all' && (
             <Link
               href="/owner/classes/new"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all"
             >
               <Plus className="w-5 h-5" />
               Add Your First Class
@@ -326,7 +327,7 @@ export default function ClassesPage() {
               }`}
             >
               {/* Category Header */}
-              <div className={`h-2 bg-gradient-to-r ${categoryColors[cls.category] || 'from-gray-500 to-gray-600'}`} />
+              <div className={`h-2 bg-linear-to-r ${categoryColors[cls.category] || 'from-gray-500 to-gray-600'}`} />
 
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">

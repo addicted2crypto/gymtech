@@ -307,11 +307,11 @@ export default function StripeConnectOnboarding() {
         <p className="text-gray-300">{config.description}</p>
 
         {/* Requirements if any */}
-        {accountData?.account?.requirements?.currently_due?.length > 0 && (
+        {accountData?.account?.requirements?.currently_due && accountData.account.requirements.currently_due.length > 0 && (
           <div className="mt-4 p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl">
             <h4 className="text-sm font-medium text-orange-400 mb-2">Action Required</h4>
             <ul className="space-y-1">
-              {accountData.account.requirements.currently_due.map((req, i) => (
+              {accountData?.account?.requirements?.currently_due?.map((req, i) => (
                 <li key={i} className="text-sm text-gray-400 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
                   {req.replace(/_/g, ' ').replace(/\./g, ' - ')}

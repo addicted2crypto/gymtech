@@ -157,7 +157,8 @@ export async function POST(request: NextRequest) {
         query = query.eq('role', 'member');
         break;
       case 'trial_users':
-        query = query.eq('role', 'trial');
+        // Trial users have is_trial flag set to true
+        query = query.eq('is_trial', true).eq('role', 'member');
         break;
       case 'inactive':
         // Members who haven't logged in for 30+ days
@@ -242,11 +243,10 @@ export async function POST(request: NextRequest) {
           .insert({
             gym_id: profile.gym_id,
             recipient_id: recipient.id,
-            channel: channel,
+            channel: channel as 'email' | 'sms',
             subject: personalizedSubject,
-            body: personalizedMessage,
-            status: 'queued',
-            created_by: authUser.id,
+            content: personalizedMessage,
+            status: 'pending' as const,
           });
 
         if (queueError) {
@@ -264,14 +264,16 @@ export async function POST(request: NextRequest) {
     // Log the campaign
     await supabase.from('message_campaigns').insert({
       gym_id: profile.gym_id,
+      name: `Campaign - ${new Date().toISOString().split('T')[0]}`,
       created_by: authUser.id,
       recipient_type: recipientType,
-      channel: channel,
+      channel: channel as 'email' | 'sms' | 'both',
       subject: subject,
-      message_template: message,
+      content: message,
       total_recipients: messageResults.total,
-      queued_count: messageResults.queued,
+      sent_count: messageResults.queued,
       failed_count: messageResults.failed,
+      status: 'completed' as const,
     });
 
     return NextResponse.json({

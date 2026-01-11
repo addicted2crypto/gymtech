@@ -28,10 +28,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user's profile and gym
+    // Get user's profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*, gyms(*)')
+      .select('gym_id, role, first_name, last_name')
       .eq('id', user.id)
       .single();
 
@@ -45,6 +45,17 @@ export async function POST(request: NextRequest) {
 
     if (!profile.gym_id) {
       return NextResponse.json({ error: 'No gym associated with this account' }, { status: 400 });
+    }
+
+    // Get gym details
+    const { data: gym, error: gymError } = await supabase
+      .from('gyms')
+      .select('name, stripe_customer_id')
+      .eq('id', profile.gym_id)
+      .single();
+
+    if (gymError || !gym) {
+      return NextResponse.json({ error: 'Gym not found' }, { status: 404 });
     }
 
     const body = await request.json();
@@ -63,13 +74,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if gym already has a Stripe customer
-    let customerId = profile.gyms?.stripe_customer_id;
+    let customerId = gym.stripe_customer_id;
 
     if (!customerId) {
       // Create a new Stripe customer
       const customer = await stripe.customers.create({
         email: user.email,
-        name: profile.gyms?.name || `${profile.first_name} ${profile.last_name}`,
+        name: gym.name || `${profile.first_name} ${profile.last_name}`,
         metadata: {
           gym_id: profile.gym_id,
           user_id: user.id,

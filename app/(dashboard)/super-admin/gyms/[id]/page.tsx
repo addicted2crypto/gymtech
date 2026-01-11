@@ -28,13 +28,25 @@ import {
 } from 'lucide-react';
 
 // Demo gym data - will come from Supabase
-const demoGym = {
+const demoGym: {
+  id: string;
+  name: string;
+  slug: string;
+  custom_domain: string;
+  domain_verified: boolean;
+  tier: 'starter' | 'pro' | 'enterprise';
+  is_trial: boolean;
+  stripe_account_id: string;
+  stripe_subscription_id: string;
+  created_at: string;
+  settings: { timezone: string; currency: string };
+} = {
   id: '1',
   name: 'Iron MMA Academy',
   slug: 'iron-mma',
   custom_domain: 'www.ironmma.com',
   domain_verified: true,
-  tier: 'pro' as const,
+  tier: 'pro',
   is_trial: false,
   stripe_account_id: 'acct_1234567890',
   stripe_subscription_id: 'sub_1234567890',

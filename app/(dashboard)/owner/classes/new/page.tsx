@@ -75,14 +75,16 @@ export default function NewClassPage() {
         return;
       }
 
+      if (!gym?.id) return;
+
       const supabase = createClient();
 
       // Fetch instructors (staff members)
       const { data: staff } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
-        .eq('gym_id', gym?.id)
-        .in('role', ['gym_owner', 'gym_manager', 'gym_staff']);
+        .eq('gym_id', gym.id)
+        .in('role', ['gym_owner', 'gym_staff']);
 
       setInstructors(staff || []);
     };
@@ -109,13 +111,19 @@ export default function NewClassPage() {
       return;
     }
 
+    if (!gym?.id) {
+      setError('Gym not found');
+      setSaving(false);
+      return;
+    }
+
     const supabase = createClient();
 
     // Create the class
     const { data: newClass, error: classError } = await supabase
       .from('classes')
       .insert({
-        gym_id: gym?.id,
+        gym_id: gym.id,
         name: classData.name,
         description: classData.description || null,
         instructor_id: classData.instructor_id || null,
@@ -184,7 +192,7 @@ export default function NewClassPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
@@ -388,7 +396,7 @@ export default function NewClassPage() {
         <div className={schedules.length > 0 ? 'pt-6 border-t border-white/10' : ''}>
           <h3 className="text-sm font-medium text-gray-300 mb-4">Add Schedule</h3>
           <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-[150px]">
+            <div className="flex-1 min-w-37.5">
               <label className="block text-xs text-gray-500 mb-1">Day</label>
               <select
                 value={newSchedule.day_of_week}
