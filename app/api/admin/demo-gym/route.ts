@@ -1,25 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 // This endpoint creates a gym without requiring Stripe payment
 // Only accessible by super admins for testing purposes
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! // Use service role to bypass RLS
 );
 
+// Helper to verify super_admin role from session
+async function verifySuperAdmin(): Promise<{ authorized: boolean; userId?: string }> {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {
+          // Read-only for this check
+        },
+      },
+    }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { authorized: false };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || profile.role !== 'super_admin') {
+    return { authorized: false };
+  }
+
+  return { authorized: true, userId: user.id };
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Verify super_admin via session
+    const auth = await verifySuperAdmin();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: 'Forbidden: Super admin access required' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { name, slug, tier, ownerEmail } = body;
-
-    // TODO: Verify caller is super_admin via session/token
-    // For now, check for admin header (replace with proper auth)
-    const adminKey = request.headers.get('x-admin-key');
-    if (adminKey !== process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     if (!name || !slug || !tier) {
       return NextResponse.json(
@@ -29,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if slug is available
-    const { data: existingGym } = await supabase
+    const { data: existingGym } = await supabaseAdmin
       .from('gyms')
       .select('id')
       .eq('slug', slug)
@@ -43,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the gym with specified tier (bypassing payment)
-    const { data: gym, error: gymError } = await supabase
+    const { data: gym, error: gymError } = await supabaseAdmin
       .from('gyms')
       .insert({
         name,
@@ -72,7 +110,7 @@ export async function POST(request: NextRequest) {
     // If owner email provided, create owner profile
     if (ownerEmail) {
       // Check if user exists
-      const { data: existingUser } = await supabase
+      const { data: existingUser } = await supabaseAdmin
         .from('profiles')
         .select('id')
         .eq('email', ownerEmail)
@@ -80,7 +118,7 @@ export async function POST(request: NextRequest) {
 
       if (existingUser) {
         // Link existing user to new gym as owner
-        await supabase
+        await supabaseAdmin
           .from('profiles')
           .update({ gym_id: gym.id, role: 'gym_owner' })
           .eq('id', existingUser.id);
@@ -110,14 +148,14 @@ export async function POST(request: NextRequest) {
 // Update tier for a demo gym
 export async function PATCH(request: NextRequest) {
   try {
+    // Verify super_admin via session
+    const auth = await verifySuperAdmin();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: 'Forbidden: Super admin access required' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { gymId, tier } = body;
-
-    // Verify admin
-    const adminKey = request.headers.get('x-admin-key');
-    if (adminKey !== process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     if (!gymId || !tier) {
       return NextResponse.json(
@@ -134,7 +172,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('gyms')
       .update({ tier })
       .eq('id', gymId);
@@ -159,14 +197,14 @@ export async function PATCH(request: NextRequest) {
 // Delete demo gym
 export async function DELETE(request: NextRequest) {
   try {
+    // Verify super_admin via session
+    const auth = await verifySuperAdmin();
+    if (!auth.authorized) {
+      return NextResponse.json({ error: 'Forbidden: Super admin access required' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const gymId = searchParams.get('gymId');
-
-    // Verify admin
-    const adminKey = request.headers.get('x-admin-key');
-    if (adminKey !== process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 20)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     if (!gymId) {
       return NextResponse.json(
@@ -176,7 +214,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Only allow deleting test mode gyms
-    const { data: gym } = await supabase
+    const { data: gym } = await supabaseAdmin
       .from('gyms')
       .select('settings')
       .eq('id', gymId)
@@ -190,7 +228,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete gym (cascade should handle related records)
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('gyms')
       .delete()
       .eq('id', gymId);

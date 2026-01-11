@@ -152,7 +152,7 @@ function PricingContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+    <div className="min-h-screen bg-linear-to-b from-gray-900 to-gray-800">
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
         <div className="text-center">
@@ -210,7 +210,7 @@ function PricingContent() {
               key={tier.id}
               className={`relative rounded-2xl ${
                 tier.popular
-                  ? 'bg-gradient-to-b from-blue-600 to-blue-700 ring-2 ring-blue-400'
+                  ? 'bg-linear-to-b from-blue-600 to-blue-700 ring-2 ring-blue-400'
                   : 'bg-gray-800'
               } p-8`}
             >
@@ -279,9 +279,9 @@ function PricingContent() {
                     return (
                       <div key={key} className="flex items-center gap-3">
                         {hasFeature ? (
-                          <Check className="w-5 h-5 text-green-400 flex-shrink-0" />
+                          <Check className="w-5 h-5 text-green-400 shrink-0" />
                         ) : (
-                          <X className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                          <X className="w-5 h-5 text-gray-500 shrink-0" />
                         )}
                         <span
                           className={`text-sm ${
@@ -320,7 +320,7 @@ export default function PricingPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+        <div className="min-h-screen bg-linear-to-b from-gray-900 to-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
             <div className="text-center animate-pulse">
               <div className="h-12 bg-white/10 rounded w-1/2 mx-auto" />

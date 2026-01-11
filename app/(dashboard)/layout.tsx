@@ -100,8 +100,8 @@ export default function DashboardLayout({
         });
         setGym({
           id: 'demo-gym',
-          name: 'Iron Temple MMA',
-          slug: 'iron-temple-mma',
+          name: 'Demo Gym (No Supabase)',
+          slug: 'demo-gym',
           logo_url: null,
           custom_domain: null,
           domain_verified: false,
