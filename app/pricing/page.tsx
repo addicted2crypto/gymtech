@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, X, Loader2 } from 'lucide-react';
 
@@ -112,7 +112,7 @@ const featureLabels: Record<string, string> = {
   dedicatedManager: 'Dedicated account manager',
 };
 
-export default function PricingPage() {
+function PricingContent() {
   const [interval, setInterval] = useState<'monthly' | 'yearly'>('monthly');
   const [loading, setLoading] = useState<string | null>(null);
   const router = useRouter();
@@ -313,5 +313,40 @@ export default function PricingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
+            <div className="text-center animate-pulse">
+              <div className="h-12 bg-white/10 rounded w-1/2 mx-auto" />
+              <div className="h-6 bg-white/10 rounded w-1/3 mx-auto mt-4" />
+            </div>
+          </div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-gray-800 rounded-2xl p-8 animate-pulse">
+                  <div className="h-6 bg-white/10 rounded w-1/2 mx-auto" />
+                  <div className="h-12 bg-white/10 rounded w-1/3 mx-auto mt-6" />
+                  <div className="h-12 bg-white/10 rounded w-full mt-8" />
+                  <div className="space-y-3 mt-8">
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <div key={j} className="h-4 bg-white/10 rounded" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <PricingContent />
+    </Suspense>
   );
 }

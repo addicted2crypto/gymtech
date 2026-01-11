@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Mail,
@@ -139,7 +139,7 @@ function generateCouponCode(prefix: string = 'GYM'): string {
   return code;
 }
 
-export default function MessagingPage() {
+function MessagingContent() {
   const searchParams = useSearchParams();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -895,5 +895,21 @@ export default function MessagingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MessagingPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div className="h-8 bg-white/10 rounded w-1/4 animate-pulse" />
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 animate-pulse">
+          <div className="h-4 bg-white/10 rounded w-1/2 mb-4" />
+          <div className="h-32 bg-white/10 rounded" />
+        </div>
+      </div>
+    }>
+      <MessagingContent />
+    </Suspense>
   );
 }

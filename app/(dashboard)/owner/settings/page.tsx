@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Settings,
@@ -32,7 +32,7 @@ const TABS: { id: SettingsTab; label: string; icon: typeof Settings }[] = [
   { id: 'security', label: 'Security', icon: Shield },
 ];
 
-export default function OwnerSettingsPage() {
+function SettingsContent() {
   const searchParams = useSearchParams();
   const stripeStatus = searchParams.get('stripe');
 
@@ -203,7 +203,9 @@ export default function OwnerSettingsPage() {
 
           {/* Billing/Subscription Settings */}
           {activeTab === 'billing' && (
-            <BillingSection />
+            <Suspense fallback={<div className="animate-pulse bg-white/5 rounded-2xl h-96" />}>
+              <BillingSection />
+            </Suspense>
           )}
 
           {/* Payments Settings - Stripe Connect */}
@@ -716,5 +718,25 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
         />
       </div>
     </div>
+  );
+}
+
+export default function OwnerSettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div className="h-8 bg-white/10 rounded w-1/4 animate-pulse" />
+        <div className="flex gap-6">
+          <div className="w-64 space-y-2">
+            {[...Array(7)].map((_, i) => (
+              <div key={i} className="h-12 bg-white/5 rounded-xl animate-pulse" />
+            ))}
+          </div>
+          <div className="flex-1 bg-white/5 rounded-2xl h-96 animate-pulse" />
+        </div>
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }
