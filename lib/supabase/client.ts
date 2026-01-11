@@ -16,18 +16,31 @@
  */
 
 import { createBrowserClient } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
 /**
- * Create a Supabase client for browser/client components
- *
- * This client:
- * - Uses the public anon key (safe to expose)
- * - All queries are filtered by RLS policies
- * - User can only access data their role allows
+ * Create a typed Supabase client for browser/client components
+ * Use for SELECT queries where type inference works correctly
  */
 export function createClient() {
   return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+/**
+ * Create an untyped Supabase client for mutations (insert/update/delete)
+ *
+ * The @supabase/ssr package has a type inference bug where mutations
+ * expect 'never' as the parameter type. This client bypasses that issue.
+ *
+ * Use this for: .insert(), .update(), .delete(), .upsert()
+ * Use createClient() for: .select() queries
+ */
+export function createMutationClient() {
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );

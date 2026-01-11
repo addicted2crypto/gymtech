@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createMutationClient } from '@/lib/supabase/client';
 import { ArrowRight } from 'lucide-react';
 
 function LoginForm() {
@@ -37,7 +37,8 @@ function LoginForm() {
     // Update login streak (handled by trigger, but we trigger it here)
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase
+      const mutationClient = createMutationClient();
+      await mutationClient
         .from('profiles')
         .update({ last_login_at: new Date().toISOString() })
         .eq('id', user.id);

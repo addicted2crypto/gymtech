@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, createMutationClient } from '@/lib/supabase/client';
 import { ArrowRight, Check } from 'lucide-react';
 
 type SignupType = 'gym_owner' | 'member';
@@ -51,25 +51,23 @@ export default function SignupPage() {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)+/g, '');
 
-      const { error: gymError } = await supabase
+      const mutationClient = createMutationClient();
+      const { error: gymError } = await mutationClient
         .from('gyms')
-        .insert({
-          name: gymName,
-          slug,
-        });
+        .insert({ name: gymName, slug });
 
       if (gymError) {
         console.error('Error creating gym:', gymError);
       } else {
         // Update profile with gym_id
-        const { data: gymData } = await supabase
+        const { data: gymData } = await mutationClient
           .from('gyms')
           .select('id')
           .eq('slug', slug)
           .single();
 
         if (gymData) {
-          await supabase
+          await mutationClient
             .from('profiles')
             .update({ gym_id: gymData.id, role: 'gym_owner' })
             .eq('id', data.user.id);

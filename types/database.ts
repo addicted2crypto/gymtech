@@ -558,8 +558,16 @@ export interface Database {
       campaign_channel: CampaignChannel;
       social_platform: SocialPlatform;
     };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 }
+
+// Type helpers for Supabase operations
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
+export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
+export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
 
 // Helper types for easier usage
 export type Gym = Database['public']['Tables']['gyms']['Row'];
