@@ -198,7 +198,7 @@ export default function GymDetailPage() {
         member_count: memberCount || 0,
         active_members: memberCount || 0, // TODO: Calculate based on recent activity
         class_count: classCount || 0,
-        page_views_30d: gymData.page_views_30d || 0,
+        page_views_30d: 0, // TODO: Calculate from page_views table
       });
 
       setMembers(membersData || []);
