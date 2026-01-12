@@ -459,7 +459,7 @@ function TierBadge({ tier }: { tier: string }) {
   );
 }
 
-function StatusBadge({ status, isTrial, trialEndsAt }: { status: string; isTrial: boolean; trialEndsAt?: string }) {
+function StatusBadge({ status = 'active', isTrial, trialEndsAt }: { status?: string; isTrial: boolean; trialEndsAt?: string | null }) {
   if (isTrial) {
     const daysLeft = trialEndsAt
       ? Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
