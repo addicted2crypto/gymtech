@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createAuthClient } from '@/lib/supabase/client';
+import { createAuthClient, createClient } from '@/lib/supabase/client';
 import { ArrowRight } from 'lucide-react';
 
 function LoginForm() {
@@ -34,10 +34,36 @@ function LoginForm() {
       return;
     }
 
-    // TODO: Add login tracking via database trigger instead of client-side update
-    // The client-side PATCH was causing 500 errors and blocking login
+    // Get user and their role to determine redirect
+    const { data: { user } } = await authClient.auth.getUser();
+    if (!user) {
+      setError('Failed to get user after login');
+      setIsLoading(false);
+      return;
+    }
 
-    router.push(redirectTo);
+    // Fetch profile to get role
+    const dbClient = createClient();
+    const { data: profile } = await dbClient
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    // Determine redirect based on role
+    let destination = redirectTo;
+    if (!searchParams.get('redirect')) {
+      // Only override if no explicit redirect was requested
+      if (profile?.role === 'super_admin') {
+        destination = '/super-admin';
+      } else if (profile?.role === 'member') {
+        destination = '/member';
+      } else if (profile?.role === 'gym_owner' || profile?.role === 'gym_staff') {
+        destination = '/owner';
+      }
+    }
+
+    router.push(destination);
     router.refresh();
   };
 
