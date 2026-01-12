@@ -160,7 +160,7 @@ export default function MembersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
@@ -185,7 +185,7 @@ export default function MembersPage() {
             <Download className="w-4 h-4" />
             Export
           </button>
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25">
+          <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all shadow-lg shadow-orange-500/25">
             <Plus className="w-5 h-5" />
             Add Member
           </button>
@@ -302,7 +302,7 @@ export default function MembersPage() {
                 <tr key={member.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
+                      <div className="w-10 h-10 bg-linear-to-br from-orange-500 to-amber-500 rounded-full flex items-center justify-center">
                         {member.avatar_url ? (
                           <img
                             src={member.avatar_url}

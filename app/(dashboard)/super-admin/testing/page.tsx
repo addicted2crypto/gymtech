@@ -572,7 +572,7 @@ export default function AdminTestingPage() {
           {/* Impersonation Info */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
             <div className="flex gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <h3 className="font-medium text-amber-400">Impersonation Mode</h3>
                 <p className="text-sm text-amber-400/80 mt-1">

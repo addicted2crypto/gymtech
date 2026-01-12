@@ -43,6 +43,11 @@ export interface Database {
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           settings: Json;
+          tier: GymTier;
+          tier_started_at: string | null;
+          max_members: number;
+          trial_ends_at: string | null;
+          is_trial: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -57,6 +62,11 @@ export interface Database {
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           settings?: Json;
+          tier?: GymTier;
+          tier_started_at?: string | null;
+          max_members?: number;
+          trial_ends_at?: string | null;
+          is_trial?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -71,6 +81,11 @@ export interface Database {
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           settings?: Json;
+          tier?: GymTier;
+          tier_started_at?: string | null;
+          max_members?: number;
+          trial_ends_at?: string | null;
+          is_trial?: boolean;
           updated_at?: string;
         };
         Relationships: [];
