@@ -636,7 +636,7 @@ function FeatureGroup({
   badge: string;
   badgeColor: 'green' | 'purple' | 'amber';
   features: { key: string; label: string }[];
-  values: Record<string, boolean | number>;
+  values: GymFeatures;
   onToggle: (key: string) => void;
 }) {
   const badgeColors = {
@@ -654,23 +654,26 @@ function FeatureGroup({
         </span>
       </div>
       <div className="space-y-3">
-        {features.map((feature) => (
-          <label key={feature.key} className="flex items-center justify-between cursor-pointer">
-            <span className="text-gray-300">{feature.label}</span>
-            <button
-              onClick={() => onToggle(feature.key)}
-              className={`relative w-10 h-5 rounded-full transition-colors ${
-                values[feature.key] ? 'bg-green-500' : 'bg-white/20'
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
-                  values[feature.key] ? 'right-0.5' : 'left-0.5'
+        {features.map((feature) => {
+          const isEnabled = values[feature.key as keyof GymFeatures];
+          return (
+            <label key={feature.key} className="flex items-center justify-between cursor-pointer">
+              <span className="text-gray-300">{feature.label}</span>
+              <button
+                onClick={() => onToggle(feature.key)}
+                className={`relative w-10 h-5 rounded-full transition-colors ${
+                  isEnabled ? 'bg-green-500' : 'bg-white/20'
                 }`}
-              />
-            </button>
-          </label>
-        ))}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${
+                    isEnabled ? 'right-0.5' : 'left-0.5'
+                  }`}
+                />
+              </button>
+            </label>
+          );
+        })}
       </div>
     </div>
   );
