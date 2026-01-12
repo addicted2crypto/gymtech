@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import { useAuthStore } from '@/stores/authStore';
 import {
   PlayCircle,
   Building2,
@@ -38,12 +40,6 @@ interface DemoGym {
   createdAt: string;
 }
 
-// Demo gyms for testing (in production these come from Supabase)
-const initialDemoGyms: DemoGym[] = [
-  { id: 'demo-1', name: 'Test Starter Gym', slug: 'test-starter', tier: 'starter', createdAt: new Date().toISOString() },
-  { id: 'demo-2', name: 'Test Pro Gym', slug: 'test-pro', tier: 'pro', createdAt: new Date().toISOString() },
-];
-
 const CUSTOMER_JOURNEY_STEPS = [
   { id: 'signup', label: 'Sign Up', description: 'Create account & gym', route: '/signup' },
   { id: 'payment', label: 'Payment', description: 'Choose plan (or bypass)', route: '/pricing' },
@@ -58,70 +54,145 @@ const CUSTOMER_JOURNEY_STEPS = [
 
 export default function AdminTestingPage() {
   const router = useRouter();
-  const [demoGyms, setDemoGyms] = useState<DemoGym[]>(initialDemoGyms);
+  const { user, startImpersonation, setGym } = useAuthStore();
+  const [demoGyms, setDemoGyms] = useState<DemoGym[]>([]);
   const [selectedGym, setSelectedGym] = useState<DemoGym | null>(null);
   const [impersonateRole, setImpersonateRole] = useState<Role>('gym_owner');
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [newGymForm, setNewGymForm] = useState({ name: '', slug: '', tier: 'pro' as Tier });
   const [activeMode, setActiveMode] = useState<'gyms' | 'journey' | 'impersonate'>('journey');
+
+  // Fetch real gyms from Supabase
+  useEffect(() => {
+    async function fetchGyms() {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('gyms')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const gyms: DemoGym[] = data.map((g: Record<string, unknown>) => ({
+          id: g.id as string,
+          name: g.name as string,
+          slug: g.slug as string,
+          tier: (g.tier as Tier) || 'starter',
+          createdAt: g.created_at as string,
+        }));
+        setDemoGyms(gyms);
+      }
+      setIsLoading(false);
+    }
+    fetchGyms();
+  }, []);
 
   const handleCreateDemoGym = async () => {
     if (!newGymForm.name || !newGymForm.slug) return;
 
     setIsCreating(true);
 
-    // Simulate API call - in production this creates a real gym without payment
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const supabase = createClient();
+    const slug = newGymForm.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
-    const newGym: DemoGym = {
-      id: `demo-${Date.now()}`,
-      name: newGymForm.name,
-      slug: newGymForm.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
-      tier: newGymForm.tier,
-      createdAt: new Date().toISOString(),
-    };
+    const { data, error } = await supabase
+      .from('gyms')
+      .insert({
+        name: newGymForm.name,
+        slug: slug,
+        tier: newGymForm.tier,
+        is_trial: true,
+      })
+      .select()
+      .single();
 
-    setDemoGyms(prev => [...prev, newGym]);
-    setNewGymForm({ name: '', slug: '', tier: 'pro' });
+    if (!error && data) {
+      const newGym: DemoGym = {
+        id: data.id,
+        name: data.name,
+        slug: data.slug,
+        tier: (data as Record<string, unknown>).tier as Tier || 'starter',
+        createdAt: data.created_at,
+      };
+      setDemoGyms(prev => [...prev, newGym]);
+      setNewGymForm({ name: '', slug: '', tier: 'pro' });
+    } else {
+      console.error('Failed to create gym:', error);
+      alert('Failed to create gym: ' + (error?.message || 'Unknown error'));
+    }
+
     setIsCreating(false);
   };
 
   const handleDeleteDemoGym = async (gymId: string) => {
-    // In production, this would call API to delete test gym
-    setDemoGyms(prev => prev.filter(g => g.id !== gymId));
-    if (selectedGym?.id === gymId) {
-      setSelectedGym(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('gyms')
+      .delete()
+      .eq('id', gymId);
+
+    if (!error) {
+      setDemoGyms(prev => prev.filter(g => g.id !== gymId));
+      if (selectedGym?.id === gymId) {
+        setSelectedGym(null);
+      }
+    } else {
+      console.error('Failed to delete gym:', error);
+      alert('Failed to delete gym: ' + error.message);
     }
   };
 
-  const handleStartImpersonation = () => {
-    if (!selectedGym) return;
+  const handleStartImpersonation = async () => {
+    if (!selectedGym || !user) return;
 
-    // In production, this sets a session flag for impersonation
-    // and redirects to the appropriate dashboard
-    const routes: Record<Role, string> = {
-      gym_owner: '/owner',
-      gym_manager: '/owner', // managers see owner view with limited permissions
-      gym_staff: '/staff',
-      member: '/member',
+    // Fetch the full gym data
+    const supabase = createClient();
+    const { data: gymData } = await supabase
+      .from('gyms')
+      .select('*')
+      .eq('id', selectedGym.id)
+      .single();
+
+    if (gymData) {
+      // Set the gym in auth store
+      setGym(gymData);
+    }
+
+    // Use auth store impersonation
+    const roleMap: Record<Role, 'gym_owner' | 'gym_staff' | 'member'> = {
+      gym_owner: 'gym_owner',
+      gym_manager: 'gym_owner', // managers see owner view
+      gym_staff: 'gym_staff',
+      member: 'member',
     };
 
-    // Store impersonation state (would use context/session in production)
-    sessionStorage.setItem('impersonation', JSON.stringify({
-      gymId: selectedGym.id,
-      gymName: selectedGym.name,
-      role: impersonateRole,
-      originalRole: 'super_admin',
-    }));
+    startImpersonation(selectedGym.id, roleMap[impersonateRole], user.id);
+
+    // Redirect to appropriate dashboard
+    const routes: Record<Role, string> = {
+      gym_owner: '/owner',
+      gym_manager: '/owner',
+      gym_staff: '/owner', // staff use owner dashboard with limited access
+      member: '/member',
+    };
 
     router.push(routes[impersonateRole]);
   };
 
   const handleChangeTier = async (gymId: string, newTier: Tier) => {
-    // In production, this calls API to update gym tier
-    setDemoGyms(prev => prev.map(g =>
-      g.id === gymId ? { ...g, tier: newTier } : g
-    ));
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('gyms')
+      .update({ tier: newTier })
+      .eq('id', gymId);
+
+    if (!error) {
+      setDemoGyms(prev => prev.map(g =>
+        g.id === gymId ? { ...g, tier: newTier } : g
+      ));
+    } else {
+      console.error('Failed to update tier:', error);
+    }
   };
 
   return (

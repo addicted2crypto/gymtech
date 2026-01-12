@@ -192,19 +192,16 @@ export default function SuperAdminDashboard() {
           label="Total Gyms"
           value={platformStats.totalGyms}
           icon={Building2}
-          trend="+12 this month"
         />
         <StatCard
           label="Total Members"
           value={platformStats.totalMembers.toLocaleString()}
           icon={Users}
-          trend="+1,234 this month"
         />
         <StatCard
           label="MRR"
           value={`$${platformStats.monthlyRevenue.toLocaleString()}`}
           icon={CreditCard}
-          trend="+8.2%"
         />
         <StatCard
           label="Active Trials"
@@ -383,24 +380,28 @@ export default function SuperAdminDashboard() {
       <div className="grid md:grid-cols-3 gap-6">
         <QuickActionCard
           title="Gyms Needing Attention"
-          description="3 gyms with payment issues"
+          description={`${gyms.filter(g => g.stripe_status === 'past_due').length} gyms with payment issues`}
           icon={AlertCircle}
           color="red"
           href="/super-admin/gyms?filter=issues"
         />
         <QuickActionCard
           title="Expiring Trials"
-          description="5 trials ending this week"
+          description={`${gyms.filter(g => {
+            if (!g.is_trial || !g.trial_ends_at) return false;
+            const daysLeft = Math.ceil((new Date(g.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            return daysLeft <= 7 && daysLeft > 0;
+          }).length} trials ending this week`}
           icon={Clock}
           color="amber"
           href="/super-admin/gyms?filter=expiring"
         />
         <QuickActionCard
-          title="Feature Requests"
-          description="12 pending requests"
+          title="Testing Mode"
+          description="Create and test demo gyms"
           icon={Zap}
           color="purple"
-          href="/super-admin/feature-requests"
+          href="/super-admin/testing"
         />
       </div>
     </div>
