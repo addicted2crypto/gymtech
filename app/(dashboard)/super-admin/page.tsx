@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Building2,
@@ -19,96 +19,115 @@ import {
   Zap,
   MessageSquare,
   Mail,
+  Plus,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
-// Demo data - will come from Supabase gym_stats view
-const demoGyms = [
-  {
-    id: '1',
-    name: 'Iron MMA Academy',
-    slug: 'iron-mma',
-    tier: 'pro',
-    is_trial: false,
-    member_count: 247,
-    class_count: 12,
-    lead_count: 34,
-    page_views_30d: 1523,
-    sms_credits_used: 123,
-    sms_credits_monthly: 500,
-    email_credits_used: 456,
-    email_credits_monthly: 1000,
-    created_at: '2025-11-15',
-    stripe_status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Downtown BJJ',
-    slug: 'downtown-bjj',
-    tier: 'starter',
-    is_trial: true,
-    trial_ends_at: '2026-01-20',
-    member_count: 45,
-    class_count: 8,
-    lead_count: 12,
-    page_views_30d: 234,
-    sms_credits_used: 0,
-    sms_credits_monthly: 0,
-    email_credits_used: 89,
-    email_credits_monthly: 1000,
-    created_at: '2026-01-06',
-    stripe_status: 'trialing',
-  },
-  {
-    id: '3',
-    name: 'Elite Fight Club',
-    slug: 'elite-fight',
-    tier: 'enterprise',
-    is_trial: false,
-    member_count: 823,
-    class_count: 24,
-    lead_count: 156,
-    page_views_30d: 4521,
-    sms_credits_used: 1234,
-    sms_credits_monthly: 2000,
-    email_credits_used: 2345,
-    email_credits_monthly: 5000,
-    created_at: '2025-08-01',
-    stripe_status: 'active',
-  },
-  {
-    id: '4',
-    name: 'Muay Thai Masters',
-    slug: 'muay-thai-masters',
-    tier: 'pro',
-    is_trial: false,
-    member_count: 189,
-    class_count: 10,
-    lead_count: 28,
-    page_views_30d: 987,
-    sms_credits_used: 234,
-    sms_credits_monthly: 500,
-    email_credits_used: 567,
-    email_credits_monthly: 1000,
-    created_at: '2025-10-01',
-    stripe_status: 'past_due',
-  },
-];
+interface Gym {
+  id: string;
+  name: string;
+  slug: string;
+  tier: string;
+  is_trial: boolean;
+  trial_ends_at?: string;
+  is_suspended: boolean;
+  stripe_status?: string;
+  created_at: string;
+  member_count?: number;
+  page_views_30d?: number;
+  sms_credits_used?: number;
+  sms_credits_monthly?: number;
+  email_credits_used?: number;
+  email_credits_monthly?: number;
+}
 
-const platformStats = {
-  totalGyms: 127,
-  totalMembers: 15234,
-  monthlyRevenue: 18750,
-  activeTrials: 23,
-  churned30d: 3,
-  newGyms30d: 12,
-};
+interface PlatformStats {
+  totalGyms: number;
+  totalMembers: number;
+  monthlyRevenue: number;
+  activeTrials: number;
+  churned30d: number;
+  newGyms30d: number;
+}
 
 export default function SuperAdminDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTier, setFilterTier] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [gyms, setGyms] = useState<Gym[]>([]);
+  const [platformStats, setPlatformStats] = useState<PlatformStats>({
+    totalGyms: 0,
+    totalMembers: 0,
+    monthlyRevenue: 0,
+    activeTrials: 0,
+    churned30d: 0,
+    newGyms30d: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const filteredGyms = demoGyms.filter(gym => {
+  useEffect(() => {
+    async function fetchData() {
+      const supabase = createClient();
+
+      // Fetch all gyms
+      const { data: gymsData, error: gymsError } = await supabase
+        .from('gyms')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (gymsError) {
+        console.error('Error fetching gyms:', gymsError);
+      } else {
+        // For each gym, get member count
+        const gymsWithStats = await Promise.all(
+          (gymsData || []).map(async (gym) => {
+            const { count: memberCount } = await supabase
+              .from('profiles')
+              .select('*', { count: 'exact', head: true })
+              .eq('gym_id', gym.id)
+              .eq('role', 'member');
+
+            return {
+              ...gym,
+              member_count: memberCount || 0,
+              page_views_30d: 0, // TODO: implement page views tracking
+              sms_credits_used: 0,
+              sms_credits_monthly: gym.tier === 'starter' ? 0 : gym.tier === 'pro' ? 500 : 2000,
+              email_credits_used: 0,
+              email_credits_monthly: 1000,
+              stripe_status: gym.is_trial ? 'trialing' : gym.is_suspended ? 'past_due' : 'active',
+            };
+          })
+        );
+        setGyms(gymsWithStats);
+
+        // Calculate platform stats
+        const totalGyms = gymsWithStats.length;
+        const totalMembers = gymsWithStats.reduce((sum, g) => sum + (g.member_count || 0), 0);
+        const activeTrials = gymsWithStats.filter(g => g.is_trial).length;
+
+        // Count gyms created in last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const newGyms30d = gymsWithStats.filter(g => new Date(g.created_at) > thirtyDaysAgo).length;
+
+        setPlatformStats({
+          totalGyms,
+          totalMembers,
+          monthlyRevenue: 0, // TODO: integrate with Stripe
+          activeTrials,
+          churned30d: 0, // TODO: track churn
+          newGyms30d,
+        });
+      }
+
+      setLoading(false);
+    }
+
+    fetchData();
+  }, []);
+
+  const filteredGyms = gyms.filter(gym => {
     const matchesSearch = gym.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          gym.slug.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTier = filterTier === 'all' || gym.tier === filterTier;
@@ -119,14 +138,42 @@ export default function SuperAdminDashboard() {
     return matchesSearch && matchesTier && matchesStatus;
   });
 
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
+          <p className="text-gray-400 mt-1">Loading...</p>
+        </div>
+        <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4 animate-pulse">
+              <div className="h-4 bg-white/10 rounded w-1/2 mb-3" />
+              <div className="h-8 bg-white/10 rounded w-3/4" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
-        <p className="text-gray-400 mt-1">
-          Monitor all gyms, manage features, and track platform health
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
+          <p className="text-gray-400 mt-1">
+            Monitor all gyms, manage features, and track platform health
+          </p>
+        </div>
+        <Link
+          href="/super-admin/testing"
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Create Test Gym
+        </Link>
       </div>
 
       {/* Platform Stats */}
@@ -302,7 +349,22 @@ export default function SuperAdminDashboard() {
 
         {filteredGyms.length === 0 && (
           <div className="p-12 text-center">
-            <p className="text-gray-500">No gyms found matching your filters</p>
+            {gyms.length === 0 ? (
+              <div className="space-y-4">
+                <Building2 className="w-12 h-12 text-gray-600 mx-auto" />
+                <p className="text-gray-400 text-lg">No gyms yet</p>
+                <p className="text-gray-500 text-sm">Create a test gym to start exploring the platform</p>
+                <Link
+                  href="/super-admin/testing"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors mt-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Test Gym
+                </Link>
+              </div>
+            ) : (
+              <p className="text-gray-500">No gyms found matching your filters</p>
+            )}
           </div>
         )}
       </div>
