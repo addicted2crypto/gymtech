@@ -14,14 +14,12 @@
  * - Any column with "_encrypted" suffix
  * - Service role operations
  *
- * ARCHITECTURE NOTE:
- * We use two clients due to a type inference bug in @supabase/ssr:
- * - createAuthClient(): For authentication (handles cookies properly)
- * - createClient(): For database operations (has correct TypeScript types)
+ * IMPORTANT: Both createAuthClient() and createClient() use createBrowserClient
+ * from @supabase/ssr to properly handle cookies and session. This is required
+ * for RLS policies that use auth.uid() to work correctly.
  */
 
 import { createBrowserClient } from '@supabase/ssr';
-import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
 /**
@@ -37,7 +35,7 @@ import type { Database } from '@/types/database';
  * This uses @supabase/ssr which properly handles cookies in the browser.
  */
 export function createAuthClient() {
-  return createBrowserClient(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
@@ -53,11 +51,11 @@ export function createAuthClient() {
  * - .from('table').delete()
  * - .rpc()
  *
- * This uses the base @supabase/supabase-js package which has correct
- * TypeScript type inference with the Database generic.
+ * IMPORTANT: This uses createBrowserClient to inherit the auth session.
+ * Without this, RLS policies that check auth.uid() would fail.
  */
-export function createClient(): SupabaseClient<Database> {
-  return createSupabaseClient<Database>(
+export function createClient() {
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
