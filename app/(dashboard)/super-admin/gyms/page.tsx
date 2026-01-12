@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -21,7 +21,7 @@ import {
 
 type FilterType = 'all' | 'active' | 'trial' | 'issues' | 'expiring';
 
-export default function SuperAdminGymsPage() {
+function GymsContent() {
   const searchParams = useSearchParams();
   const initialFilter = (searchParams.get('filter') as FilterType) || 'all';
 
@@ -91,7 +91,7 @@ export default function SuperAdminGymsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">All Gyms</h1>
         </div>
-        <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center justify-center min-h-100">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
         </div>
       </div>
@@ -294,5 +294,24 @@ export default function SuperAdminGymsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SuperAdminGymsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-white">All Gyms</h1>
+          </div>
+          <div className="flex items-center justify-center min-h-100">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+          </div>
+        </div>
+      }
+    >
+      <GymsContent />
+    </Suspense>
   );
 }
