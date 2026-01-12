@@ -305,28 +305,28 @@ export default function SuperAdminDashboard() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-white font-medium">{gym.member_count}</span>
+                      <span className="text-white font-medium">{gym.member_count ?? 0}</span>
                       <span className="text-gray-500 text-sm">/ {gym.tier === 'starter' ? 100 : gym.tier === 'pro' ? 500 : '∞'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1">
                       <Eye className="w-4 h-4 text-gray-500" />
-                      <span className="text-white">{gym.page_views_30d.toLocaleString()}</span>
+                      <span className="text-white">{(gym.page_views_30d ?? 0).toLocaleString()}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm">
                         <MessageSquare className="w-3 h-3 text-gray-500" />
-                        <span className={gym.sms_credits_used > gym.sms_credits_monthly * 0.8 ? 'text-amber-400' : 'text-gray-400'}>
-                          {gym.sms_credits_used}/{gym.sms_credits_monthly}
+                        <span className={(gym.sms_credits_used ?? 0) > (gym.sms_credits_monthly ?? 0) * 0.8 ? 'text-amber-400' : 'text-gray-400'}>
+                          {gym.sms_credits_used ?? 0}/{gym.sms_credits_monthly ?? 0}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-sm">
                         <Mail className="w-3 h-3 text-gray-500" />
-                        <span className={gym.email_credits_used > gym.email_credits_monthly * 0.8 ? 'text-amber-400' : 'text-gray-400'}>
-                          {gym.email_credits_used}/{gym.email_credits_monthly}
+                        <span className={(gym.email_credits_used ?? 0) > (gym.email_credits_monthly ?? 0) * 0.8 ? 'text-amber-400' : 'text-gray-400'}>
+                          {gym.email_credits_used ?? 0}/{gym.email_credits_monthly ?? 0}
                         </span>
                       </div>
                     </div>
