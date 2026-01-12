@@ -37,13 +37,20 @@ function LoginForm() {
       return;
     }
 
-    // Update login streak (handled by trigger, but we trigger it here)
+    // Update login timestamp (non-blocking - don't fail login if this errors)
     const { data: { user } } = await authClient.auth.getUser();
     if (user) {
-      await dbClient
-        .from('profiles')
-        .update({ last_login_at: new Date().toISOString() })
-        .eq('id', user.id);
+      // Fire and forget - wrapped in async IIFE to handle errors silently
+      (async () => {
+        try {
+          await dbClient
+            .from('profiles')
+            .update({ last_login_at: new Date().toISOString() })
+            .eq('id', user.id);
+        } catch {
+          // Silently ignore - login tracking is non-critical
+        }
+      })();
     }
 
     router.push(redirectTo);
