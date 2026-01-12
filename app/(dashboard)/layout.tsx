@@ -109,6 +109,11 @@ export default function DashboardLayout({
           stripe_customer_id: null,
           stripe_subscription_id: null,
           settings: {},
+          tier: 'pro',
+          tier_started_at: null,
+          max_members: 100,
+          trial_ends_at: null,
+          is_trial: false,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         });
