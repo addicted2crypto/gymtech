@@ -397,7 +397,7 @@ export default function AdminTestingPage() {
                 <select
                   value={newGymForm.tier}
                   onChange={(e) => setNewGymForm(prev => ({ ...prev, tier: e.target.value as Tier }))}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500/50"
+                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500/50 [&>option]:text-gray-900 [&>option]:bg-white"
                 >
                   <option value="starter">Starter ($79/mo)</option>
                   <option value="pro">Pro ($149/mo)</option>
@@ -451,7 +451,7 @@ export default function AdminTestingPage() {
                       <select
                         value={gym.tier}
                         onChange={(e) => handleChangeTier(gym.id, e.target.value as Tier)}
-                        className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500/50"
+                        className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-orange-500/50 [&>option]:text-gray-900 [&>option]:bg-white"
                       >
                         <option value="starter">Starter</option>
                         <option value="pro">Pro</option>
