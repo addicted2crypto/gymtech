@@ -43,100 +43,6 @@ type Member = {
   } | null;
 };
 
-// Demo data
-const demoMembers: Member[] = [
-  {
-    id: '1',
-    member_number: 'MEM-001',
-    first_name: 'John',
-    last_name: 'Smith',
-    avatar_url: null,
-    role: 'member',
-    is_trial: false,
-    login_streak: 12,
-    class_streak: 8,
-    loyalty_points: 450,
-    created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    subscription: { status: 'active', plan_name: 'Pro' },
-  },
-  {
-    id: '2',
-    member_number: 'MEM-002',
-    first_name: 'Sarah',
-    last_name: 'Johnson',
-    avatar_url: null,
-    role: 'member',
-    is_trial: false,
-    login_streak: 7,
-    class_streak: 5,
-    loyalty_points: 280,
-    created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    subscription: { status: 'active', plan_name: 'Elite' },
-  },
-  {
-    id: '3',
-    member_number: 'MEM-003',
-    first_name: 'Mike',
-    last_name: 'Lee',
-    avatar_url: null,
-    role: 'member',
-    is_trial: true,
-    login_streak: 3,
-    class_streak: 2,
-    loyalty_points: 30,
-    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    subscription: null,
-  },
-  {
-    id: '4',
-    member_number: 'MEM-004',
-    first_name: 'Emily',
-    last_name: 'Davis',
-    avatar_url: null,
-    role: 'member',
-    is_trial: false,
-    login_streak: 0,
-    class_streak: 0,
-    loyalty_points: 120,
-    created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login_at: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    subscription: { status: 'past_due', plan_name: 'Basic' },
-  },
-  {
-    id: '5',
-    member_number: 'MEM-005',
-    first_name: 'James',
-    last_name: 'Wilson',
-    avatar_url: null,
-    role: 'member',
-    is_trial: false,
-    login_streak: 21,
-    class_streak: 15,
-    loyalty_points: 890,
-    created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login_at: new Date().toISOString(),
-    subscription: { status: 'active', plan_name: 'Elite' },
-  },
-  {
-    id: '6',
-    member_number: 'MEM-006',
-    first_name: 'Lisa',
-    last_name: 'Brown',
-    avatar_url: null,
-    role: 'member',
-    is_trial: true,
-    login_streak: 1,
-    class_streak: 1,
-    loyalty_points: 10,
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    last_login_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-    subscription: null,
-  },
-];
-
 const statusColors: Record<string, string> = {
   active: 'bg-green-500/20 text-green-400 border-green-500/30',
   trialing: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
@@ -157,11 +63,8 @@ export default function MembersPage() {
 
   useEffect(() => {
     const fetchMembers = async () => {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-      if (!supabaseUrl || !gym?.id) {
-        // Demo mode
-        setMembers(demoMembers);
+      if (!gym?.id) {
+        setMembers([]);
         setLoading(false);
         return;
       }
@@ -191,7 +94,7 @@ export default function MembersPage() {
 
       if (error) {
         console.error('Error fetching members:', error);
-        setMembers(demoMembers);
+        setMembers([]);
       } else {
         // TODO: Join with subscriptions to get plan info
         setMembers(data || []);
