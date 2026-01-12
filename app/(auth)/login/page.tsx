@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createAuthClient, createClient } from '@/lib/supabase/client';
+import { createAuthClient } from '@/lib/supabase/client';
 import { ArrowRight } from 'lucide-react';
 
 function LoginForm() {
@@ -21,10 +21,7 @@ function LoginForm() {
     setError(null);
     setIsLoading(true);
 
-    // Use auth client for authentication (handles cookies properly)
     const authClient = createAuthClient();
-    // Use typed client for database operations
-    const dbClient = createClient();
 
     const { error: signInError } = await authClient.auth.signInWithPassword({
       email,
@@ -37,21 +34,8 @@ function LoginForm() {
       return;
     }
 
-    // Update login timestamp (non-blocking - don't fail login if this errors)
-    const { data: { user } } = await authClient.auth.getUser();
-    if (user) {
-      // Fire and forget - wrapped in async IIFE to handle errors silently
-      (async () => {
-        try {
-          await dbClient
-            .from('profiles')
-            .update({ last_login_at: new Date().toISOString() })
-            .eq('id', user.id);
-        } catch {
-          // Silently ignore - login tracking is non-critical
-        }
-      })();
-    }
+    // TODO: Add login tracking via database trigger instead of client-side update
+    // The client-side PATCH was causing 500 errors and blocking login
 
     router.push(redirectTo);
     router.refresh();
