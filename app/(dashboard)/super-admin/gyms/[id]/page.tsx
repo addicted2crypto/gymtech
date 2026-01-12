@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
+import type { Gym } from '@/types/database';
 import {
   ArrowLeft,
   Building2,
@@ -25,93 +27,186 @@ import {
   MoreVertical,
   Save,
   RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 
-// Demo gym data - will come from Supabase
-const demoGym: {
-  id: string;
-  name: string;
-  slug: string;
-  custom_domain: string;
-  domain_verified: boolean;
-  tier: 'starter' | 'pro' | 'enterprise';
-  is_trial: boolean;
-  stripe_account_id: string;
-  stripe_subscription_id: string;
-  created_at: string;
-  settings: { timezone: string; currency: string };
-} = {
-  id: '1',
-  name: 'Iron MMA Academy',
-  slug: 'iron-mma',
-  custom_domain: 'www.ironmma.com',
-  domain_verified: true,
-  tier: 'pro',
-  is_trial: false,
-  stripe_account_id: 'acct_1234567890',
-  stripe_subscription_id: 'sub_1234567890',
-  created_at: '2025-11-15',
-  settings: {
-    timezone: 'America/New_York',
-    currency: 'USD',
-  },
-};
-
-const demoFeatures = {
-  // Core
-  class_scheduling: true,
-  payment_processing: true,
-  check_in_system: true,
-  basic_analytics: true,
-  subdomain_site: true,
-  // Pro
-  landing_page_builder: true,
-  custom_domain: true,
-  loyalty_rewards: true,
-  flash_sales: true,
-  sms_marketing: true,
-  advanced_analytics: true,
-  // Enterprise
-  multi_location: false,
-  white_label: false,
-  social_crossposting: false,
-  trial_lead_insights: false,
-  api_access: false,
-  dedicated_manager: false,
-  // Usage
-  sms_credits_monthly: 500,
-  sms_credits_used: 123,
-  email_credits_monthly: 1000,
-  email_credits_used: 456,
-};
-
-const demoStats = {
-  member_count: 247,
-  active_members: 198,
-  class_count: 12,
-  classes_this_month: 156,
-  bookings_this_month: 1234,
-  lead_count: 34,
-  page_views_30d: 1523,
-  revenue_30d: 24500,
-};
-
-const demoMembers = [
-  { id: '1', name: 'John Smith', email: 'john@email.com', status: 'active', joined: '2025-06-15', lastLogin: '2026-01-04' },
-  { id: '2', name: 'Sarah Johnson', email: 'sarah@email.com', status: 'active', joined: '2025-08-22', lastLogin: '2026-01-05' },
-  { id: '3', name: 'Mike Williams', email: 'mike@email.com', status: 'inactive', joined: '2025-04-10', lastLogin: '2025-12-15' },
-  { id: '4', name: 'Emily Brown', email: 'emily@email.com', status: 'active', joined: '2025-10-01', lastLogin: '2026-01-03' },
-  { id: '5', name: 'David Lee', email: 'david@email.com', status: 'active', joined: '2025-11-30', lastLogin: '2026-01-05' },
-];
-
 type Tab = 'overview' | 'members' | 'features' | 'billing';
+
+interface GymStats {
+  member_count: number;
+  active_members: number;
+  class_count: number;
+  page_views_30d: number;
+}
+
+interface GymFeatures {
+  class_scheduling: boolean;
+  payment_processing: boolean;
+  check_in_system: boolean;
+  basic_analytics: boolean;
+  subdomain_site: boolean;
+  landing_page_builder: boolean;
+  custom_domain: boolean;
+  loyalty_rewards: boolean;
+  flash_sales: boolean;
+  sms_marketing: boolean;
+  advanced_analytics: boolean;
+  multi_location: boolean;
+  white_label: boolean;
+  social_crossposting: boolean;
+  trial_lead_insights: boolean;
+  api_access: boolean;
+  dedicated_manager: boolean;
+  sms_credits_monthly: number;
+  sms_credits_used: number;
+  email_credits_monthly: number;
+  email_credits_used: number;
+}
+
+interface Member {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+// Get default features based on tier
+function getDefaultFeatures(tier: string): GymFeatures {
+  const base = {
+    class_scheduling: true,
+    payment_processing: true,
+    check_in_system: true,
+    basic_analytics: true,
+    subdomain_site: true,
+    landing_page_builder: false,
+    custom_domain: false,
+    loyalty_rewards: false,
+    flash_sales: false,
+    sms_marketing: false,
+    advanced_analytics: false,
+    multi_location: false,
+    white_label: false,
+    social_crossposting: false,
+    trial_lead_insights: false,
+    api_access: false,
+    dedicated_manager: false,
+    sms_credits_monthly: 0,
+    sms_credits_used: 0,
+    email_credits_monthly: 100,
+    email_credits_used: 0,
+  };
+
+  if (tier === 'pro') {
+    return {
+      ...base,
+      landing_page_builder: true,
+      custom_domain: true,
+      loyalty_rewards: true,
+      flash_sales: true,
+      sms_marketing: true,
+      advanced_analytics: true,
+      sms_credits_monthly: 500,
+      email_credits_monthly: 1000,
+    };
+  }
+
+  if (tier === 'enterprise') {
+    return {
+      ...base,
+      landing_page_builder: true,
+      custom_domain: true,
+      loyalty_rewards: true,
+      flash_sales: true,
+      sms_marketing: true,
+      advanced_analytics: true,
+      multi_location: true,
+      white_label: true,
+      social_crossposting: true,
+      trial_lead_insights: true,
+      api_access: true,
+      dedicated_manager: true,
+      sms_credits_monthly: 2000,
+      email_credits_monthly: 5000,
+    };
+  }
+
+  return base;
+}
 
 export default function GymDetailPage() {
   const params = useParams();
   const gymId = params.id as string;
+
+  const [gym, setGym] = useState<Gym | null>(null);
+  const [stats, setStats] = useState<GymStats>({ member_count: 0, active_members: 0, class_count: 0, page_views_30d: 0 });
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('overview');
-  const [features, setFeatures] = useState(demoFeatures);
+  const [features, setFeatures] = useState<GymFeatures>(getDefaultFeatures('starter'));
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function fetchGymData() {
+      const supabase = createClient();
+
+      // Fetch gym details
+      const { data: gymData, error: gymError } = await supabase
+        .from('gyms')
+        .select('*')
+        .eq('id', gymId)
+        .single();
+
+      if (gymError) {
+        setError('Failed to load gym: ' + gymError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!gymData) {
+        setError('Gym not found');
+        setLoading(false);
+        return;
+      }
+
+      setGym(gymData);
+      setFeatures(getDefaultFeatures(gymData.tier));
+
+      // Fetch member count
+      const { count: memberCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('gym_id', gymId);
+
+      // Fetch class count
+      const { count: classCount } = await supabase
+        .from('classes')
+        .select('*', { count: 'exact', head: true })
+        .eq('gym_id', gymId);
+
+      // Fetch members list (top 10)
+      const { data: membersData } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, role, created_at, last_login_at')
+        .eq('gym_id', gymId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setStats({
+        member_count: memberCount || 0,
+        active_members: memberCount || 0, // TODO: Calculate based on recent activity
+        class_count: classCount || 0,
+        page_views_30d: gymData.page_views_30d || 0,
+      });
+
+      setMembers(membersData || []);
+      setLoading(false);
+    }
+
+    fetchGymData();
+  }, [gymId]);
 
   const handleFeatureToggle = (feature: string) => {
     setFeatures(prev => ({
@@ -122,17 +217,43 @@ export default function GymDetailPage() {
 
   const handleSaveFeatures = async () => {
     setSaving(true);
-    // Simulate API call
+    // TODO: Save to gym_features table
     await new Promise(resolve => setTimeout(resolve, 1000));
     setSaving(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
+  if (error || !gym) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-96 text-center">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">Error</h2>
+        <p className="text-gray-400 mb-4">{error || 'Gym not found'}</p>
+        <Link
+          href="/super-admin/gyms"
+          className="text-orange-400 hover:text-orange-300"
+        >
+          ← Back to All Gyms
+        </Link>
+      </div>
+    );
+  }
+
+  const memberLimit = gym.tier === 'starter' ? 100 : gym.tier === 'pro' ? 500 : 999999;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
-          href="/super-admin"
+          href="/super-admin/gyms"
           className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -140,19 +261,19 @@ export default function GymDetailPage() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-linear-to-br from-orange-500 to-amber-500 rounded-xl flex items-center justify-center text-white font-bold text-xl">
-              {demoGym.name.charAt(0)}
+              {gym.name.charAt(0)}
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{demoGym.name}</h1>
+              <h1 className="text-2xl font-bold text-white">{gym.name}</h1>
               <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <span>{demoGym.slug}.gymtech.com</span>
-                {demoGym.custom_domain && (
+                <span>{gym.slug}.techforgyms.shop</span>
+                {gym.custom_domain && (
                   <>
                     <span>•</span>
                     <span className="flex items-center gap-1">
                       <Globe className="w-3 h-3" />
-                      {demoGym.custom_domain}
-                      {demoGym.domain_verified && <CheckCircle2 className="w-3 h-3 text-green-400" />}
+                      {gym.custom_domain}
+                      {gym.domain_verified && <CheckCircle2 className="w-3 h-3 text-green-400" />}
                     </span>
                   </>
                 )}
@@ -161,9 +282,14 @@ export default function GymDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <TierBadge tier={demoGym.tier} />
+          <TierBadge tier={gym.tier} />
+          {gym.is_trial && (
+            <span className="px-3 py-1.5 bg-blue-500/20 text-blue-400 rounded-full text-sm font-medium">
+              Trial
+            </span>
+          )}
           <a
-            href={`https://${demoGym.slug}.gymtech.com`}
+            href={`https://${gym.slug}.techforgyms.shop`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-gray-300 hover:bg-white/10 transition-colors"
@@ -171,9 +297,6 @@ export default function GymDetailPage() {
             <ExternalLink className="w-4 h-4" />
             Visit Site
           </a>
-          <button className="p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-            <MoreVertical className="w-5 h-5" />
-          </button>
         </div>
       </div>
 
@@ -201,10 +324,10 @@ export default function GymDetailPage() {
         <div className="space-y-6">
           {/* Stats Grid */}
           <div className="grid md:grid-cols-4 gap-4">
-            <StatCard label="Total Members" value={demoStats.member_count} subtext={`${demoStats.active_members} active`} icon={Users} />
-            <StatCard label="Classes" value={demoStats.class_count} subtext={`${demoStats.classes_this_month} this month`} icon={Calendar} />
-            <StatCard label="Page Views" value={demoStats.page_views_30d} subtext="Last 30 days" icon={Eye} />
-            <StatCard label="Revenue" value={`$${(demoStats.revenue_30d / 100).toLocaleString()}`} subtext="Last 30 days" icon={CreditCard} />
+            <StatCard label="Total Members" value={stats.member_count} subtext={`of ${memberLimit === 999999 ? '∞' : memberLimit} max`} icon={Users} />
+            <StatCard label="Classes" value={stats.class_count} subtext="Active classes" icon={Calendar} />
+            <StatCard label="Page Views" value={stats.page_views_30d} subtext="Last 30 days" icon={Eye} />
+            <StatCard label="Tier" value={gym.tier.charAt(0).toUpperCase() + gym.tier.slice(1)} subtext={gym.is_trial ? 'Trial period' : 'Active'} icon={Crown} />
           </div>
 
           {/* Quick Info */}
@@ -213,35 +336,43 @@ export default function GymDetailPage() {
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
               <h3 className="font-semibold text-white mb-4">Gym Information</h3>
               <div className="space-y-3">
-                <InfoRow label="Created" value={new Date(demoGym.created_at).toLocaleDateString()} />
-                <InfoRow label="Timezone" value={demoGym.settings.timezone} />
-                <InfoRow label="Currency" value={demoGym.settings.currency} />
-                <InfoRow label="Stripe Account" value={demoGym.stripe_account_id} copyable />
+                <InfoRow label="Created" value={new Date(gym.created_at).toLocaleDateString()} />
+                <InfoRow label="Gym ID" value={gym.id} copyable />
+                {gym.stripe_account_id && (
+                  <InfoRow label="Stripe Account" value={gym.stripe_account_id} copyable />
+                )}
+                {gym.trial_ends_at && (
+                  <InfoRow label="Trial Ends" value={new Date(gym.trial_ends_at).toLocaleDateString()} />
+                )}
               </div>
             </div>
 
             {/* Usage */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="font-semibold text-white mb-4">Usage This Month</h3>
+              <h3 className="font-semibold text-white mb-4">Usage</h3>
               <div className="space-y-4">
                 <UsageBar
-                  label="SMS Credits"
-                  used={features.sms_credits_used}
-                  total={features.sms_credits_monthly}
-                  icon={MessageSquare}
-                />
-                <UsageBar
-                  label="Email Credits"
-                  used={features.email_credits_used}
-                  total={features.email_credits_monthly}
-                  icon={Mail}
-                />
-                <UsageBar
                   label="Members"
-                  used={demoStats.member_count}
-                  total={demoGym.tier === 'starter' ? 100 : demoGym.tier === 'pro' ? 500 : 999999}
+                  used={stats.member_count}
+                  total={memberLimit}
                   icon={Users}
                 />
+                {features.sms_credits_monthly > 0 && (
+                  <UsageBar
+                    label="SMS Credits"
+                    used={features.sms_credits_used}
+                    total={features.sms_credits_monthly}
+                    icon={MessageSquare}
+                  />
+                )}
+                {features.email_credits_monthly > 0 && (
+                  <UsageBar
+                    label="Email Credits"
+                    used={features.email_credits_used}
+                    total={features.email_credits_monthly}
+                    icon={Mail}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -251,41 +382,47 @@ export default function GymDetailPage() {
       {activeTab === 'members' && (
         <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
-            <h3 className="font-semibold text-white">Members ({demoStats.member_count})</h3>
-            <button className="text-sm text-orange-400 hover:text-orange-300">
-              Export CSV
-            </button>
+            <h3 className="font-semibold text-white">Members ({stats.member_count})</h3>
           </div>
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-gray-400 text-sm border-b border-white/5">
-                <th className="px-4 py-3 font-medium">Name</th>
-                <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Joined</th>
-                <th className="px-4 py-3 font-medium">Last Login</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {demoMembers.map((member) => (
-                <tr key={member.id} className="hover:bg-white/5">
-                  <td className="px-4 py-3 text-white">{member.name}</td>
-                  <td className="px-4 py-3 text-gray-400">{member.email}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      member.status === 'active'
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {member.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400">{member.joined}</td>
-                  <td className="px-4 py-3 text-gray-400">{member.lastLogin}</td>
+          {members.length === 0 ? (
+            <div className="p-12 text-center">
+              <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-500">No members yet</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-gray-400 text-sm border-b border-white/5">
+                  <th className="px-4 py-3 font-medium">Name</th>
+                  <th className="px-4 py-3 font-medium">Role</th>
+                  <th className="px-4 py-3 font-medium">Joined</th>
+                  <th className="px-4 py-3 font-medium">Last Login</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {members.map((member) => (
+                  <tr key={member.id} className="hover:bg-white/5">
+                    <td className="px-4 py-3 text-white">{member.first_name} {member.last_name}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        member.role === 'gym_owner'
+                          ? 'bg-purple-500/20 text-purple-400'
+                          : member.role === 'gym_staff'
+                          ? 'bg-blue-500/20 text-blue-400'
+                          : 'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {member.role.replace('gym_', '').replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-400">{new Date(member.created_at).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-gray-400">
+                      {member.last_login_at ? new Date(member.last_login_at).toLocaleDateString() : 'Never'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -293,11 +430,11 @@ export default function GymDetailPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <p className="text-gray-400">
-              Manually override features for this gym. Changes will persist until you reset them.
+              Features are determined by the gym's tier. Override features below for testing.
             </p>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setFeatures(demoFeatures)}
+                onClick={() => setFeatures(getDefaultFeatures(gym.tier))}
                 className="flex items-center gap-2 px-4 py-2 text-gray-400 hover:text-white transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -316,7 +453,6 @@ export default function GymDetailPage() {
 
           {/* Feature Groups */}
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Core Features */}
             <FeatureGroup
               title="Core Features"
               badge="All Plans"
@@ -332,7 +468,6 @@ export default function GymDetailPage() {
               onToggle={handleFeatureToggle}
             />
 
-            {/* Pro Features */}
             <FeatureGroup
               title="Pro Features"
               badge="Pro+"
@@ -349,7 +484,6 @@ export default function GymDetailPage() {
               onToggle={handleFeatureToggle}
             />
 
-            {/* Enterprise Features */}
             <FeatureGroup
               title="Enterprise Features"
               badge="Enterprise"
@@ -366,31 +500,6 @@ export default function GymDetailPage() {
               onToggle={handleFeatureToggle}
             />
           </div>
-
-          {/* Usage Limits */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="font-semibold text-white mb-4">Usage Limits</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Monthly SMS Credits</label>
-                <input
-                  type="number"
-                  value={features.sms_credits_monthly}
-                  onChange={(e) => setFeatures(prev => ({ ...prev, sms_credits_monthly: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500/50"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Monthly Email Credits</label>
-                <input
-                  type="number"
-                  value={features.email_credits_monthly}
-                  onChange={(e) => setFeatures(prev => ({ ...prev, email_credits_monthly: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-orange-500/50"
-                />
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -401,38 +510,41 @@ export default function GymDetailPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between py-3 border-b border-white/5">
                 <span className="text-gray-400">Current Plan</span>
-                <TierBadge tier={demoGym.tier} />
+                <TierBadge tier={gym.tier} />
               </div>
               <div className="flex items-center justify-between py-3 border-b border-white/5">
                 <span className="text-gray-400">Status</span>
-                <span className="text-green-400">Active</span>
+                <span className={gym.is_trial ? 'text-blue-400' : 'text-green-400'}>
+                  {gym.is_trial ? 'Trial' : 'Active'}
+                </span>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-white/5">
-                <span className="text-gray-400">Monthly Amount</span>
-                <span className="text-white font-medium">$199.00/month</span>
-              </div>
-              <div className="flex items-center justify-between py-3 border-b border-white/5">
-                <span className="text-gray-400">Stripe Subscription</span>
-                <span className="text-gray-300 font-mono text-sm">{demoGym.stripe_subscription_id}</span>
-              </div>
-              <div className="flex items-center justify-between py-3">
-                <span className="text-gray-400">Next Billing Date</span>
-                <span className="text-white">February 15, 2026</span>
-              </div>
+              {gym.stripe_subscription_id && (
+                <div className="flex items-center justify-between py-3 border-b border-white/5">
+                  <span className="text-gray-400">Stripe Subscription</span>
+                  <span className="text-gray-300 font-mono text-sm">{gym.stripe_subscription_id}</span>
+                </div>
+              )}
+              {gym.trial_ends_at && (
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-gray-400">Trial Ends</span>
+                  <span className="text-white">{new Date(gym.trial_ends_at).toLocaleDateString()}</span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex gap-4">
-            <button className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors">
-              Upgrade to Enterprise
-            </button>
-            <button className="px-4 py-2 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors">
-              Downgrade
-            </button>
-            <button className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">
-              Cancel Subscription
-            </button>
+            {gym.tier !== 'enterprise' && (
+              <button className="px-4 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors">
+                Upgrade to {gym.tier === 'starter' ? 'Pro' : 'Enterprise'}
+              </button>
+            )}
+            {gym.tier !== 'starter' && (
+              <button className="px-4 py-2 bg-gray-500/20 text-gray-400 rounded-lg hover:bg-gray-500/30 transition-colors">
+                Downgrade
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -473,7 +585,7 @@ function InfoRow({ label, value, copyable }: { label: string; value: string; cop
     <div className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
       <span className="text-gray-400">{label}</span>
       <div className="flex items-center gap-2">
-        <span className="text-white font-mono text-sm">{value}</span>
+        <span className="text-white font-mono text-sm truncate max-w-48">{value}</span>
         {copyable && (
           <button
             onClick={() => navigator.clipboard.writeText(value)}
@@ -488,7 +600,7 @@ function InfoRow({ label, value, copyable }: { label: string; value: string; cop
 }
 
 function UsageBar({ label, used, total, icon: Icon }: { label: string; used: number; total: number; icon: React.ElementType }) {
-  const percentage = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+  const percentage = total > 0 && total !== 999999 ? Math.min((used / total) * 100, 100) : 0;
   const isHigh = percentage > 80;
 
   return (
@@ -505,7 +617,7 @@ function UsageBar({ label, used, total, icon: Icon }: { label: string; used: num
       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${isHigh ? 'bg-amber-500' : 'bg-green-500'}`}
-          style={{ width: `${percentage}%` }}
+          style={{ width: `${total === 999999 ? 0 : percentage}%` }}
         />
       </div>
     </div>
