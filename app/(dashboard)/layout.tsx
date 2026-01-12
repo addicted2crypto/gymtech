@@ -63,7 +63,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, gym, isImpersonating, stopImpersonation, setUser, setGym, setLoading } = useAuthStore();
+  const [gymSelectorOpen, setGymSelectorOpen] = useState(false);
+  const { user, gym, userGyms, isImpersonating, stopImpersonation, setUser, setGym, setUserGyms, switchGym, setLoading, hasMultipleGyms } = useAuthStore();
 
   const isMemberView = pathname.startsWith('/member');
   const isSuperAdminView = pathname.startsWith('/super-admin');
@@ -143,8 +144,29 @@ export default function DashboardLayout({
       if (profile) {
         setUser(profile);
 
-        // Fetch gym if user has one
-        if (profile.gym_id) {
+        // Fetch all gyms this user owns/manages (multi-gym support)
+        const { data: ownedGyms } = await dbClient
+          .from('gym_owners')
+          .select('gym_id, is_primary, gyms(*)')
+          .eq('user_id', authUser.id);
+
+        if (ownedGyms && ownedGyms.length > 0) {
+          // Extract gym data from the join
+          const gyms = ownedGyms
+            .map((go: { gyms: unknown }) => go.gyms)
+            .filter(Boolean) as typeof profile.gym_id extends string ? never : never[];
+
+          setUserGyms(gyms);
+
+          // Set primary gym or first gym as active
+          const primaryGym = ownedGyms.find((go: { is_primary: boolean }) => go.is_primary);
+          if (primaryGym?.gyms) {
+            setGym(primaryGym.gyms as unknown as Parameters<typeof setGym>[0]);
+          } else if (gyms.length > 0) {
+            setGym(gyms[0]);
+          }
+        } else if (profile.gym_id) {
+          // Fall back to single gym from profile
           const { data: gymData } = await dbClient
             .from('gyms')
             .select('*')
@@ -153,6 +175,7 @@ export default function DashboardLayout({
 
           if (gymData) {
             setGym(gymData);
+            setUserGyms([gymData]);
           }
         }
       }
@@ -161,7 +184,7 @@ export default function DashboardLayout({
     };
 
     fetchUserData();
-  }, [router, setUser, setGym, setLoading]);
+  }, [router, setUser, setGym, setUserGyms, setLoading]);
 
   const handleLogout = async () => {
     const authClient = createAuthClient();
@@ -215,14 +238,54 @@ export default function DashboardLayout({
           </div>
         )}
 
-        {/* Gym Selector (for super admin) */}
+        {/* Gym Selector (for multi-gym owners) */}
         {gym && (
-          <div className="mx-4 mt-4 p-3 bg-white/5 rounded-xl border border-white/10">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">Current Gym</p>
-            <button className="flex items-center justify-between w-full mt-1">
-              <span className="font-medium text-white truncate">{gym.name}</span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            </button>
+          <div className="mx-4 mt-4 relative">
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">
+                {hasMultipleGyms() ? 'Select Gym' : 'Current Gym'}
+              </p>
+              {hasMultipleGyms() ? (
+                <button
+                  onClick={() => setGymSelectorOpen(!gymSelectorOpen)}
+                  className="flex items-center justify-between w-full mt-1 hover:text-orange-400 transition-colors"
+                >
+                  <span className="font-medium text-white truncate">{gym.name}</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${gymSelectorOpen ? 'rotate-180' : ''}`} />
+                </button>
+              ) : (
+                <span className="font-medium text-white truncate block mt-1">{gym.name}</span>
+              )}
+            </div>
+
+            {/* Dropdown for multi-gym selection */}
+            {gymSelectorOpen && hasMultipleGyms() && (
+              <div className="absolute left-0 right-0 mt-2 bg-[#1a1a24] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden">
+                {userGyms.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      switchGym(g);
+                      setGymSelectorOpen(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left hover:bg-white/5 transition-colors flex items-center gap-3 ${
+                      g.id === gym.id ? 'bg-orange-500/10 text-orange-400' : 'text-gray-300'
+                    }`}
+                  >
+                    <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+                      {g.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{g.name}</p>
+                      <p className="text-xs text-gray-500 truncate">{g.slug}.techforgyms.shop</p>
+                    </div>
+                    {g.id === gym.id && (
+                      <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

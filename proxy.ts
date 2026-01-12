@@ -9,7 +9,7 @@ const PLATFORM_HOSTNAMES = [
   'localhost',
 ];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host')?.split(':')[0] || '';
   const pathname = request.nextUrl.pathname;
 

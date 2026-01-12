@@ -117,6 +117,34 @@ export interface Database {
         };
         Relationships: [];
       };
+      gym_owners: {
+        Row: {
+          id: string;
+          user_id: string;
+          gym_id: string;
+          role: 'owner' | 'manager' | 'admin';
+          is_primary: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          gym_id: string;
+          role?: 'owner' | 'manager' | 'admin';
+          is_primary?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          gym_id?: string;
+          role?: 'owner' | 'manager' | 'admin';
+          is_primary?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -985,3 +1013,5 @@ export type LandingPage = Database['public']['Tables']['landing_pages']['Row'];
 export type MediaUpload = Database['public']['Tables']['media_uploads']['Row'];
 export type SocialConnection = Database['public']['Tables']['social_connections']['Row'];
 export type Lead = Database['public']['Tables']['leads']['Row'];
+export type GymOwner = Database['public']['Tables']['gym_owners']['Row'];
+export type GymOwnerInsert = Database['public']['Tables']['gym_owners']['Insert'];

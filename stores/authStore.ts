@@ -13,12 +13,15 @@ interface ImpersonationState {
 interface AuthState {
   user: Profile | null;
   gym: Gym | null;
+  userGyms: Gym[]; // All gyms this user owns/manages
   isLoading: boolean;
   impersonation: ImpersonationState;
 
   // Actions
   setUser: (user: Profile | null) => void;
   setGym: (gym: Gym | null) => void;
+  setUserGyms: (gyms: Gym[]) => void;
+  switchGym: (gym: Gym) => void;
   setLoading: (loading: boolean) => void;
 
   // Super Admin impersonation
@@ -29,6 +32,7 @@ interface AuthState {
   // Helpers
   getEffectiveRole: () => UserRole | null;
   getEffectiveGymId: () => string | null;
+  hasMultipleGyms: () => boolean;
   isSuperAdmin: () => boolean;
   isGymOwner: () => boolean;
   isStaff: () => boolean;
@@ -49,11 +53,14 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       gym: null,
+      userGyms: [],
       isLoading: true,
       impersonation: initialImpersonation,
 
       setUser: (user) => set({ user }),
       setGym: (gym) => set({ gym }),
+      setUserGyms: (userGyms) => set({ userGyms }),
+      switchGym: (gym) => set({ gym }),
       setLoading: (isLoading) => set({ isLoading }),
 
       startImpersonation: (gymId, role, originalUserId) =>
@@ -89,6 +96,11 @@ export const useAuthStore = create<AuthState>()(
         return gym?.id || user?.gym_id || null;
       },
 
+      hasMultipleGyms: () => {
+        const { userGyms } = get();
+        return userGyms.length > 1;
+      },
+
       isSuperAdmin: () => {
         const { user } = get();
         return user?.role === 'super_admin';
@@ -113,6 +125,7 @@ export const useAuthStore = create<AuthState>()(
         set({
           user: null,
           gym: null,
+          userGyms: [],
           isLoading: false,
           impersonation: initialImpersonation,
         }),
