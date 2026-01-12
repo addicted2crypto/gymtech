@@ -87,15 +87,25 @@ export default function SuperAdminDashboard() {
               .eq('gym_id', gym.id)
               .eq('role', 'member');
 
+            // Handle potentially missing columns from migrations
+            const gymAny = gym as Record<string, unknown>;
+            const tier = (gymAny.tier as string) || 'starter';
+            const isTrial = (gymAny.is_trial as boolean) ?? false;
+            const isSuspended = (gymAny.is_suspended as boolean) ?? false;
+
             return {
               ...gym,
+              tier,
+              is_trial: isTrial,
+              is_suspended: isSuspended,
+              trial_ends_at: gymAny.trial_ends_at as string | undefined,
               member_count: memberCount || 0,
               page_views_30d: 0, // TODO: implement page views tracking
               sms_credits_used: 0,
-              sms_credits_monthly: gym.tier === 'starter' ? 0 : gym.tier === 'pro' ? 500 : 2000,
+              sms_credits_monthly: tier === 'starter' ? 0 : tier === 'pro' ? 500 : 2000,
               email_credits_used: 0,
               email_credits_monthly: 1000,
-              stripe_status: gym.is_trial ? 'trialing' : gym.is_suspended ? 'past_due' : 'active',
+              stripe_status: isTrial ? 'trialing' : isSuspended ? 'past_due' : 'active',
             };
           })
         );
@@ -104,7 +114,7 @@ export default function SuperAdminDashboard() {
         // Calculate platform stats
         const totalGyms = gymsWithStats.length;
         const totalMembers = gymsWithStats.reduce((sum, g) => sum + (g.member_count || 0), 0);
-        const activeTrials = gymsWithStats.filter(g => g.is_trial).length;
+        const activeTrials = gymsWithStats.filter(g => g.is_trial === true).length;
 
         // Count gyms created in last 30 days
         const thirtyDaysAgo = new Date();
