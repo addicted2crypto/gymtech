@@ -37,7 +37,7 @@ const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 
 export default function NewClassPage() {
   const router = useRouter();
-  const { gym } = useAuthStore();
+  const { getEffectiveGymId } = useAuthStore();
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +65,8 @@ export default function NewClassPage() {
     const fetchInstructors = async () => {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+      const gymId = getEffectiveGymId();
+
       if (!supabaseUrl) {
         // Demo mode
         setInstructors([
@@ -75,7 +77,7 @@ export default function NewClassPage() {
         return;
       }
 
-      if (!gym?.id) return;
+      if (!gymId) return;
 
       const supabase = createClient();
 
@@ -83,14 +85,14 @@ export default function NewClassPage() {
       const { data: staff } = await supabase
         .from('profiles')
         .select('id, first_name, last_name')
-        .eq('gym_id', gym.id)
+        .eq('gym_id', gymId)
         .in('role', ['gym_owner', 'gym_staff']);
 
       setInstructors(staff || []);
     };
 
     fetchInstructors();
-  }, [gym?.id]);
+  }, [getEffectiveGymId]);
 
   const handleSave = async () => {
     if (!classData.name.trim()) {
@@ -103,6 +105,8 @@ export default function NewClassPage() {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+    const gymId = getEffectiveGymId();
+
     if (!supabaseUrl) {
       // Demo mode
       setTimeout(() => {
@@ -111,7 +115,7 @@ export default function NewClassPage() {
       return;
     }
 
-    if (!gym?.id) {
+    if (!gymId) {
       setError('Gym not found');
       setSaving(false);
       return;
@@ -123,7 +127,7 @@ export default function NewClassPage() {
     const { data: newClass, error: classError } = await supabase
       .from('classes')
       .insert({
-        gym_id: gym.id,
+        gym_id: gymId,
         name: classData.name,
         description: classData.description || null,
         instructor_id: classData.instructor_id || null,

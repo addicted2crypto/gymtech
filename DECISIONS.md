@@ -80,3 +80,18 @@ This file documents key decisions to maintain context across development session
 2. **Update types/database.ts** after new migrations
 3. **Demo gym in layout.tsx** needs all Gym fields (tier, is_trial, etc.)
 4. **RLS policies** - Super admin needs full access policies on new tables
+5. **Impersonation mode** - Use `getEffectiveGymId()` from authStore, not `gym?.id` directly (gym object is null during impersonation)
+
+---
+
+## Database Migration Guidelines
+
+**Before creating new migrations**:
+
+1. **Check existing migrations first** - Search all files in `supabase/migrations/` for existing policies/tables before adding new ones
+2. **Check live database** - Verify what policies actually exist in Supabase dashboard
+3. **RLS INSERT policies** - Must use `WITH CHECK`, not `USING` (common mistake)
+4. **RLS UPDATE/DELETE policies** - Use `USING` clause
+5. **Test with impersonation** - Always test owner flows while impersonating to catch auth issues early
+
+**Policy naming convention**: `"Role can action table"` (e.g., "Gym owners can insert classes")

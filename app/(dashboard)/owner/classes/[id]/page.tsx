@@ -52,7 +52,7 @@ const difficultyLevels = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 export default function ClassDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { gym } = useAuthStore();
+  const { getEffectiveGymId } = useAuthStore();
   const classId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -140,11 +140,12 @@ export default function ClassDetailPage() {
       setSchedules(sched || []);
 
       // Fetch instructors (staff members)
-      if (gym?.id) {
+      const gymId = getEffectiveGymId();
+      if (gymId) {
         const { data: staff } = await supabase
           .from('profiles')
           .select('id, first_name, last_name')
-          .eq('gym_id', gym.id)
+          .eq('gym_id', gymId)
           .in('role', ['gym_owner', 'gym_staff']);
 
         setInstructors(staff || []);
@@ -153,7 +154,7 @@ export default function ClassDetailPage() {
     };
 
     fetchClassData();
-  }, [classId, gym?.id]);
+  }, [classId, getEffectiveGymId]);
 
   const handleSave = async () => {
     setSaving(true);
