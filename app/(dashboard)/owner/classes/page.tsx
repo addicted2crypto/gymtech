@@ -134,7 +134,7 @@ const categoryColors: Record<string, string> = {
 };
 
 export default function ClassesPage() {
-  const { gym } = useAuthStore();
+  const { getEffectiveGymId } = useAuthStore();
   const [classes, setClasses] = useState<ClassWithSchedules[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -145,8 +145,9 @@ export default function ClassesPage() {
   useEffect(() => {
     const fetchClasses = async () => {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const gymId = getEffectiveGymId();
 
-      if (!supabaseUrl || !gym?.id) {
+      if (!supabaseUrl || !gymId) {
         // Demo mode
         setClasses(demoClasses);
         setLoading(false);
@@ -162,7 +163,7 @@ export default function ClassesPage() {
           instructor:profiles!classes_instructor_id_fkey(first_name, last_name),
           schedules:class_schedules(id, day_of_week, start_time)
         `)
-        .eq('gym_id', gym.id)
+        .eq('gym_id', gymId)
         .order('name');
 
       if (error) {
@@ -177,7 +178,7 @@ export default function ClassesPage() {
     };
 
     fetchClasses();
-  }, [gym?.id]);
+  }, [getEffectiveGymId]);
 
   const filteredClasses = classes.filter((cls) => {
     const matchesSearch = cls.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

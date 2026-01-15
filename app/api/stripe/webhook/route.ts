@@ -10,16 +10,16 @@ const supabaseAdmin = createClient(
 );
 
 // Map Stripe price IDs to tier names
-// These will be populated after creating products in Stripe Dashboard
+// Uses environment variables configured in .env
 const PRICE_TO_TIER: Record<string, 'starter' | 'pro' | 'enterprise'> = {
-  // Monthly prices - UPDATE THESE after creating in Stripe
-  // 'price_xxxxx': 'starter',
-  // 'price_xxxxx': 'pro',
-  // 'price_xxxxx': 'enterprise',
+  // Monthly prices
+  [process.env.STRIPE_STARTER_MONTHLY_PRICE_ID || '']: 'starter',
+  [process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '']: 'pro',
+  [process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID || '']: 'enterprise',
   // Yearly prices
-  // 'price_xxxxx': 'starter',
-  // 'price_xxxxx': 'pro',
-  // 'price_xxxxx': 'enterprise',
+  [process.env.STRIPE_STARTER_YEARLY_PRICE_ID || '']: 'starter',
+  [process.env.STRIPE_PRO_YEARLY_PRICE_ID || '']: 'pro',
+  [process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID || '']: 'enterprise',
 };
 
 // Helper to get tier from price ID

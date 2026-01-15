@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/stores/authStore';
+import { createClient } from '@/lib/supabase/client';
 import {
   Plus,
   FileEdit,
@@ -14,40 +15,88 @@ import {
   Copy
 } from 'lucide-react';
 
-// Demo pages data - will come from database
-const demoPages = [
-  {
-    id: '1',
-    title: 'Main Homepage',
-    slug: '',
-    isPublished: true,
-    updatedAt: '2 hours ago',
-    views: 1234
-  },
-  {
-    id: '2',
-    title: 'Class Schedule',
-    slug: 'schedule',
-    isPublished: true,
-    updatedAt: '1 day ago',
-    views: 567
-  },
-  {
-    id: '3',
-    title: 'New Year Promo',
-    slug: 'new-year-2026',
-    isPublished: false,
-    updatedAt: '3 days ago',
-    views: 0
-  },
-];
+type LandingPage = {
+  id: string;
+  title: string;
+  slug: string;
+  is_published: boolean;
+  updated_at: string;
+  views?: number;
+};
+
+type GymInfo = {
+  slug: string;
+  custom_domain: string | null;
+};
 
 export default function OwnerPagesPage() {
-  const { gym } = useAuthStore();
-  const [pages] = useState(demoPages);
+  const { getEffectiveGymId } = useAuthStore();
+  const [pages, setPages] = useState<LandingPage[]>([]);
+  const [gymInfo, setGymInfo] = useState<GymInfo | null>(null);
+  const [loading, setLoading] = useState(true);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
-  const baseUrl = gym?.custom_domain || `${gym?.slug}.gymtech.com`;
+  useEffect(() => {
+    const fetchData = async () => {
+      const gymId = getEffectiveGymId();
+
+      if (!gymId) {
+        setLoading(false);
+        return;
+      }
+
+      const supabase = createClient();
+
+      // Fetch gym info for URL
+      const { data: gym } = await supabase
+        .from('gyms')
+        .select('slug, custom_domain')
+        .eq('id', gymId)
+        .single();
+
+      if (gym) {
+        setGymInfo(gym);
+      }
+
+      // Fetch landing pages
+      const { data: pagesData, error } = await supabase
+        .from('landing_pages')
+        .select('id, title, slug, is_published, updated_at')
+        .eq('gym_id', gymId)
+        .order('updated_at', { ascending: false });
+
+      if (!error && pagesData) {
+        setPages(pagesData);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [getEffectiveGymId]);
+
+  const baseUrl = gymInfo?.custom_domain || `${gymInfo?.slug || 'your-gym'}.gymtech.com`;
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -107,76 +156,91 @@ export default function OwnerPagesPage() {
         </div>
 
         <div className="divide-y divide-white/5">
-          {pages.map((page) => (
-            <div key={page.id} className="p-4 flex items-center gap-4 hover:bg-white/5 transition-colors">
-              <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center">
-                <FileEdit className="w-5 h-5 text-gray-400" />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-medium text-white truncate">{page.title}</h3>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    page.isPublished
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-gray-500/20 text-gray-400'
-                  }`}>
-                    {page.isPublished ? 'Published' : 'Draft'}
-                  </span>
-                </div>
-                <p className="text-gray-500 text-sm mt-0.5">
-                  /{page.slug || '(homepage)'} • Updated {page.updatedAt}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <p className="text-white font-medium">{page.views.toLocaleString()}</p>
-                  <p className="text-gray-500 text-xs">views</p>
+          {pages.length === 0 ? (
+            <div className="p-12 text-center">
+              <FileEdit className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">No pages yet</h3>
+              <p className="text-gray-400 mb-6">Create your first landing page to get started</p>
+              <Link
+                href="/owner/pages/new"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-linear-to-r from-orange-500 to-amber-500 text-white font-medium rounded-xl hover:from-orange-600 hover:to-amber-600 transition-all"
+              >
+                <Plus className="w-5 h-5" />
+                Create Your First Page
+              </Link>
+            </div>
+          ) : (
+            pages.map((page) => (
+              <div key={page.id} className="p-4 flex items-center gap-4 hover:bg-white/5 transition-colors">
+                <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center">
+                  <FileEdit className="w-5 h-5 text-gray-400" />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/owner/pages/${page.id}`}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-                    title="Edit"
-                  >
-                    <FileEdit className="w-4 h-4" />
-                  </Link>
-                  <a
-                    href={`https://${baseUrl}/${page.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-                    title="Preview"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </a>
-                  <div className="relative">
-                    <button
-                      onClick={() => setOpenMenu(openMenu === page.id ? null : page.id)}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-medium text-white truncate">{page.title}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      page.is_published
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {page.is_published ? 'Published' : 'Draft'}
+                    </span>
+                  </div>
+                  <p className="text-gray-500 text-sm mt-0.5">
+                    /{page.slug || '(homepage)'} • Updated {formatDate(page.updated_at)}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <p className="text-white font-medium">{(page.views || 0).toLocaleString()}</p>
+                    <p className="text-gray-500 text-xs">views</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/owner/pages/${page.id}`}
                       className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                      title="Edit"
                     >
-                      <MoreVertical className="w-4 h-4" />
-                    </button>
+                      <FileEdit className="w-4 h-4" />
+                    </Link>
+                    <a
+                      href={`https://${baseUrl}/${page.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                      title="Preview"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </a>
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenMenu(openMenu === page.id ? null : page.id)}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
 
-                    {openMenu === page.id && (
-                      <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a24] border border-white/10 rounded-xl shadow-xl z-10 py-1">
-                        <button className="w-full px-4 py-2 text-left text-gray-300 hover:bg-white/5 flex items-center gap-2">
-                          <Copy className="w-4 h-4" />
-                          Duplicate
-                        </button>
-                        <button className="w-full px-4 py-2 text-left text-red-400 hover:bg-white/5 flex items-center gap-2">
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </button>
-                      </div>
-                    )}
+                      {openMenu === page.id && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-[#1a1a24] border border-white/10 rounded-xl shadow-xl z-10 py-1">
+                          <button className="w-full px-4 py-2 text-left text-gray-300 hover:bg-white/5 flex items-center gap-2">
+                            <Copy className="w-4 h-4" />
+                            Duplicate
+                          </button>
+                          <button className="w-full px-4 py-2 text-left text-red-400 hover:bg-white/5 flex items-center gap-2">
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 

@@ -52,7 +52,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function MembersPage() {
-  const { gym } = useAuthStore();
+  const { getEffectiveGymId } = useAuthStore();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,7 +63,9 @@ export default function MembersPage() {
 
   useEffect(() => {
     const fetchMembers = async () => {
-      if (!gym?.id) {
+      const gymId = getEffectiveGymId();
+
+      if (!gymId) {
         setMembers([]);
         setLoading(false);
         return;
@@ -88,7 +90,7 @@ export default function MembersPage() {
           created_at,
           last_login_at
         `)
-        .eq('gym_id', gym.id)
+        .eq('gym_id', gymId)
         .eq('role', 'member')
         .order('created_at', { ascending: false });
 
@@ -104,7 +106,7 @@ export default function MembersPage() {
     };
 
     fetchMembers();
-  }, [gym?.id]);
+  }, [getEffectiveGymId]);
 
   const filteredMembers = members.filter((member) => {
     const matchesSearch =

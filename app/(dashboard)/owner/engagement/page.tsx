@@ -152,7 +152,7 @@ export default function EngagementPage() {
             <h3 className="font-semibold text-white mb-4">How Attendance is Calculated</h3>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center shrink-0">
                   <Calendar className="w-4 h-4 text-orange-400" />
                 </div>
                 <div>
@@ -161,7 +161,7 @@ export default function EngagementPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center shrink-0">
                   <TrendingUp className="w-4 h-4 text-orange-400" />
                 </div>
                 <div>
@@ -170,7 +170,7 @@ export default function EngagementPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center shrink-0">
                   <Trophy className="w-4 h-4 text-orange-400" />
                 </div>
                 <div>
@@ -250,7 +250,7 @@ export default function EngagementPage() {
 
           {/* Tip */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-start gap-4">
-            <Zap className="w-6 h-6 text-amber-400 flex-shrink-0" />
+            <Zap className="w-6 h-6 text-amber-400 shrink-0" />
             <div>
               <h3 className="font-medium text-amber-300">Pro Tip</h3>
               <p className="text-amber-400/80 text-sm mt-1">
