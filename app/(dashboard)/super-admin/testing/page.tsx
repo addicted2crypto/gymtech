@@ -45,7 +45,7 @@ const CUSTOMER_JOURNEY_STEPS = [
   { id: 'payment', label: 'Payment', description: 'Choose plan (or bypass)', route: '/pricing' },
   { id: 'onboarding', label: 'Onboarding', description: 'Initial gym setup', route: '/owner/onboarding' },
   { id: 'settings', label: 'Settings', description: 'Configure gym details', route: '/owner/settings' },
-  { id: 'landing', label: 'Landing Page', description: 'Build public website', route: '/owner/website' },
+  { id: 'landing', label: 'Landing Page', description: 'Build public website', route: '/owner/pages' },
   { id: 'classes', label: 'Classes', description: 'Create class schedule', route: '/owner/classes' },
   { id: 'staff', label: 'Staff', description: 'Add employees', route: '/owner/staff' },
   { id: 'members', label: 'Members', description: 'Add gym members', route: '/owner/members' },
@@ -327,7 +327,7 @@ export default function AdminTestingPage() {
                 title="Build Landing Page"
                 description="Create and publish gym website"
                 icon={Globe}
-                onClick={() => selectedGym && router.push('/owner/website/builder')}
+                onClick={() => selectedGym && router.push('/owner/pages')}
                 disabled={!selectedGym}
               />
               <ScenarioCard
