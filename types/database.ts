@@ -6,7 +6,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type UserRole = 'super_admin' | 'gym_owner' | 'gym_staff' | 'member';
+export type UserRole = 'super_admin' | 'gym_owner' | 'gym_manager' | 'gym_staff' | 'member';
 
 export type MembershipInterval = 'week' | 'month' | 'year';
 
