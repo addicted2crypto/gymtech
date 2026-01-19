@@ -10,7 +10,6 @@ import {
   Phone,
   MapPin,
   Clock,
-  Palette,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
@@ -19,6 +18,20 @@ import {
 } from 'lucide-react';
 
 type OnboardingStep = 'basics' | 'contact' | 'hours' | 'complete';
+
+interface GymSettings {
+  description?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  opening_time?: string;
+  closing_time?: string;
+  timezone?: string;
+  [key: string]: unknown;
+}
 
 interface GymData {
   name: string;
@@ -80,19 +93,21 @@ export default function OnboardingPage() {
         .single();
 
       if (!error && data) {
+        // Settings are stored in the settings JSONB field
+        const settings = (data.settings || {}) as GymSettings;
         setGymData({
           name: data.name || '',
-          description: data.description || '',
+          description: settings.description || '',
           logo_url: data.logo_url || null,
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          city: data.city || '',
-          state: data.state || '',
-          zip_code: data.zip_code || '',
-          opening_time: data.opening_time || '06:00',
-          closing_time: data.closing_time || '22:00',
-          timezone: data.timezone || 'America/New_York',
+          email: settings.email || '',
+          phone: settings.phone || '',
+          address: settings.address || '',
+          city: settings.city || '',
+          state: settings.state || '',
+          zip_code: settings.zip_code || '',
+          opening_time: settings.opening_time || '06:00',
+          closing_time: settings.closing_time || '22:00',
+          timezone: settings.timezone || 'America/New_York',
         });
       }
 
@@ -109,21 +124,37 @@ export default function OnboardingPage() {
     setIsSaving(true);
     const supabase = createClient();
 
+    // First get current settings to merge with new data
+    const { data: currentGym } = await supabase
+      .from('gyms')
+      .select('settings')
+      .eq('id', gymId)
+      .single();
+
+    const currentSettings = (currentGym?.settings || {}) as GymSettings;
+
+    // Merge new settings with existing
+    const updatedSettings: GymSettings = {
+      ...currentSettings,
+      description: gymData.description,
+      email: gymData.email,
+      phone: gymData.phone,
+      address: gymData.address,
+      city: gymData.city,
+      state: gymData.state,
+      zip_code: gymData.zip_code,
+      opening_time: gymData.opening_time,
+      closing_time: gymData.closing_time,
+      timezone: gymData.timezone,
+    };
+
     const { error } = await supabase
       .from('gyms')
       .update({
         name: gymData.name,
-        description: gymData.description,
         logo_url: gymData.logo_url,
-        email: gymData.email,
-        phone: gymData.phone,
-        address: gymData.address,
-        city: gymData.city,
-        state: gymData.state,
-        zip_code: gymData.zip_code,
-        opening_time: gymData.opening_time,
-        closing_time: gymData.closing_time,
-        timezone: gymData.timezone,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        settings: updatedSettings as any,
       })
       .eq('id', gymId);
 

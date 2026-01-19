@@ -92,7 +92,8 @@ export default function StaffPage() {
         console.error('Error fetching staff:', error);
         setStaff([]);
       } else {
-        setStaff(data || []);
+        // Cast the data to StaffMember[] - we've already filtered by staff roles
+        setStaff((data || []) as StaffMember[]);
       }
 
       setLoading(false);

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/authStore';
+import { createClient } from '@/lib/supabase/client';
 import {
   ArrowLeft,
   ArrowRight,
@@ -327,8 +329,10 @@ interface PageSection {
 
 export default function NewPageWizard() {
   const router = useRouter();
+  const { getEffectiveGymId } = useAuthStore();
   const [currentStep, setCurrentStep] = useState<WizardStep>('template');
   const [saving, setSaving] = useState(false);
+  const [gymSlug, setGymSlug] = useState<string>('');
 
   // Page state
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -341,6 +345,26 @@ export default function NewPageWizard() {
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
   // Demo: user is on Pro tier - cast to prevent TypeScript narrowing
   const currentTier = 'pro' as 'free' | 'pro' | 'enterprise';
+
+  // Load gym slug for preview URL
+  useEffect(() => {
+    const loadGymInfo = async () => {
+      const gymId = getEffectiveGymId();
+      if (!gymId) return;
+
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('gyms')
+        .select('slug')
+        .eq('id', gymId)
+        .single();
+
+      if (data) {
+        setGymSlug(data.slug);
+      }
+    };
+    loadGymInfo();
+  }, [getEffectiveGymId]);
 
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
@@ -399,10 +423,47 @@ export default function NewPageWizard() {
   };
 
   const handlePublish = async () => {
+    const gymId = getEffectiveGymId();
+    if (!gymId) {
+      alert('No gym selected. Please try again.');
+      return;
+    }
+
     setSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const supabase = createClient();
+
+    // Prepare page content as JSON
+    const pageContent = {
+      template: selectedTemplate?.id,
+      sections: sections.map(s => ({
+        type: s.type,
+        content: s.content,
+      })),
+      addons: addons.filter(a => a.enabled).map(a => a.id),
+    };
+
+    // Insert into landing_pages table
+    const { data, error } = await supabase
+      .from('landing_pages')
+      .insert({
+        gym_id: gymId,
+        title: pageTitle,
+        slug: pageSlug || 'home',
+        content: pageContent,
+        is_published: true,
+      })
+      .select()
+      .single();
+
     setSaving(false);
+
+    if (error) {
+      console.error('Failed to save page:', error);
+      alert('Failed to save page: ' + (error.message || 'Unknown error'));
+      return;
+    }
+
     router.push('/owner/pages');
   };
 
@@ -847,7 +908,7 @@ export default function NewPageWizard() {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <div className="px-4 py-1 bg-white/5 rounded-lg text-sm text-gray-400 font-mono">
-                    {`https://yourgym.gymtech.com/${pageSlug}`}
+                    {`https://${gymSlug || 'yourgym'}.gymtech.com/${pageSlug}`}
                   </div>
                 </div>
               </div>

@@ -88,18 +88,25 @@ export default function AdminTestingPage() {
   }, []);
 
   const handleCreateDemoGym = async () => {
-    if (!newGymForm.name || !newGymForm.slug) return;
+    if (!newGymForm.name) return;
 
     setIsCreating(true);
 
     const supabase = createClient();
-    const slug = newGymForm.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+    // Auto-generate unique slug from name + timestamp to avoid duplicates
+    const baseSlug = (newGymForm.slug || newGymForm.name)
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    const uniqueSlug = `${baseSlug}-${Date.now().toString(36)}`;
 
     const { data, error } = await supabase
       .from('gyms')
       .insert({
         name: newGymForm.name,
-        slug: slug,
+        slug: uniqueSlug,
         tier: newGymForm.tier,
         is_trial: true,
       })
@@ -114,11 +121,15 @@ export default function AdminTestingPage() {
         tier: (data as Record<string, unknown>).tier as Tier || 'starter',
         createdAt: data.created_at,
       };
-      setDemoGyms(prev => [...prev, newGym]);
+      setDemoGyms(prev => [newGym, ...prev]); // Add to beginning for visibility
       setNewGymForm({ name: '', slug: '', tier: 'pro' });
     } else {
       console.error('Failed to create gym:', error);
-      alert('Failed to create gym: ' + (error?.message || 'Unknown error'));
+      // More specific error message for duplicate slugs
+      const errorMessage = error?.message?.includes('duplicate')
+        ? 'A gym with this slug already exists. Try a different name.'
+        : (error?.message || 'Unknown error');
+      alert('Failed to create gym: ' + errorMessage);
     }
 
     setIsCreating(false);
@@ -383,12 +394,12 @@ export default function AdminTestingPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Slug (URL)</label>
+                <label className="block text-sm text-gray-400 mb-2">Slug (optional - auto-generated)</label>
                 <input
                   type="text"
                   value={newGymForm.slug}
                   onChange={(e) => setNewGymForm(prev => ({ ...prev, slug: e.target.value }))}
-                  placeholder="my-test-gym"
+                  placeholder="auto-generated from name"
                   className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50"
                 />
               </div>
