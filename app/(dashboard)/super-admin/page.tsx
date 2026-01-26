@@ -69,7 +69,7 @@ export default function SuperAdminDashboard() {
     async function fetchData() {
       const supabase = createClient();
 
-      // Fetch all gyms
+      // Fetch all gyms not just curretnt user's gym
       const { data: gymsData, error: gymsError } = await supabase
         .from('gyms')
         .select('*')
@@ -87,7 +87,7 @@ export default function SuperAdminDashboard() {
               .eq('gym_id', gym.id)
               .eq('role', 'member');
 
-            // Handle potentially missing columns from migrations
+            // Handle potentially missing columns from migrations edge cases
             const gymAny = gym as Record<string, unknown>;
             const tier = (gymAny.tier as string) || 'starter';
             const isTrial = (gymAny.is_trial as boolean) ?? false;
@@ -100,7 +100,7 @@ export default function SuperAdminDashboard() {
               is_suspended: isSuspended,
               trial_ends_at: gymAny.trial_ends_at as string | undefined,
               member_count: memberCount || 0,
-              page_views_30d: 0, // TODO: implement page views tracking
+              page_views_30d: 0, // add real data bro -> placeholder will todo
               sms_credits_used: 0,
               sms_credits_monthly: tier === 'starter' ? 0 : tier === 'pro' ? 500 : 2000,
               email_credits_used: 0,
@@ -124,9 +124,9 @@ export default function SuperAdminDashboard() {
         setPlatformStats({
           totalGyms,
           totalMembers,
-          monthlyRevenue: 0, // TODO: integrate with Stripe
+          monthlyRevenue: 0, // TODO: integrate with Stripe reading this is easy but need monies first
           activeTrials,
-          churned30d: 0, // TODO: track churn
+          churned30d: 0, // TODO: track churn but we are good so we are on fuego
           newGyms30d,
         });
       }
