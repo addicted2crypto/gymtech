@@ -111,12 +111,12 @@ export default function SuperAdminDashboard() {
         );
         setGyms(gymsWithStats);
 
-        // Calculate platform stats
+        // WILL important, STATS!
         const totalGyms = gymsWithStats.length;
         const totalMembers = gymsWithStats.reduce((sum, g) => sum + (g.member_count || 0), 0);
         const activeTrials = gymsWithStats.filter(g => g.is_trial === true).length;
 
-        // Count gyms created in last 30 days
+        // 30 day count
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         const newGyms30d = gymsWithStats.filter(g => new Date(g.created_at) > thirtyDaysAgo).length;
