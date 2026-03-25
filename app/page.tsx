@@ -43,6 +43,7 @@ export default function HomePage() {
               <Link href="#how-it-works" className="text-gray-400 hover:text-white transition-colors">How It Works</Link>
               <Link href="#pricing" className="text-gray-400 hover:text-white transition-colors">Pricing</Link>
               <Link href="#faq" className="text-gray-400 hover:text-white transition-colors">FAQ</Link>
+              <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link>
             </div>
 
             <div className="flex items-center gap-4">
@@ -540,7 +541,7 @@ export default function HomePage() {
               <div className="space-y-3 text-gray-400">
                 <Link href="#faq" className="block hover:text-white transition-colors">FAQ</Link>
                 <Link href="#" className="block hover:text-white transition-colors">Help Center</Link>
-                <Link href="#" className="block hover:text-white transition-colors">Contact</Link>
+                <Link href="/contact" className="block hover:text-white transition-colors">Contact</Link>
               </div>
             </div>
 

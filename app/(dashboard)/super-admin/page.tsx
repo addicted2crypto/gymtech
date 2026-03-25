@@ -397,11 +397,11 @@ export default function SuperAdminDashboard() {
           href="/super-admin/gyms?filter=expiring"
         />
         <QuickActionCard
-          title="Testing Mode"
-          description="Create and test demo gyms"
-          icon={Zap}
+          title="Contact Submissions"
+          description="View and reply to inquiries"
+          icon={MessageSquare}
           color="purple"
-          href="/super-admin/testing"
+          href="/super-admin/contacts"
         />
       </div>
     </div>
