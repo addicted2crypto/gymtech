@@ -6,11 +6,13 @@ import { ArrowRight, Check, MessageSquare, Mail, Phone, Building2 } from 'lucide
 
 const INQUIRY_TYPES = [
   { value: 'general', label: 'General Question' },
-  { value: 'pricing', label: 'Pricing Info' },
+  { value: 'pricing', label: 'Pricing & Plans' },
   { value: 'demo', label: 'Request a Demo' },
-  { value: 'support', label: 'Support' },
+  { value: 'web3', label: 'Web3 / Blockchain' },
+  { value: 'defi', label: 'DeFi Integration' },
+  { value: 'custom', label: 'Custom Software' },
   { value: 'partnership', label: 'Partnership' },
-  { value: 'enterprise', label: 'Enterprise Inquiry' },
+  { value: 'enterprise', label: 'Enterprise / Agency' },
 ];
 
 export default function ContactPage() {
@@ -95,7 +97,7 @@ export default function ContactPage() {
         </div>
         <h1 className="text-2xl font-bold text-white">Get in Touch</h1>
         <p className="text-gray-400 mt-2">
-          Have questions about GymTech? We&apos;d love to hear from you.
+          Gym management, Web3, DeFi, custom software — whatever you&apos;re building, let&apos;s talk.
         </p>
       </div>
 
@@ -158,7 +160,7 @@ export default function ContactPage() {
           </div>
           <div>
             <label htmlFor="businessName" className="block text-sm font-medium text-gray-300 mb-2">
-              <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Gym / Business</span>
+              <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Company / Project</span>
             </label>
             <input
               id="businessName"
@@ -204,7 +206,7 @@ export default function ContactPage() {
             maxLength={5000}
             rows={4}
             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all resize-none"
-            placeholder="Tell us about your gym and what you're looking for..."
+            placeholder="Tell us about your project and what you're looking for..."
           />
         </div>
 

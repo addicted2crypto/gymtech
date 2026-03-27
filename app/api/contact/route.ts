@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createDbClient } from '@/lib/supabase/server';
 
-const VALID_INQUIRY_TYPES = ['general', 'pricing', 'demo', 'support', 'partnership', 'enterprise'];
+const VALID_INQUIRY_TYPES = ['general', 'pricing', 'demo', 'support', 'partnership', 'enterprise', 'web3', 'defi', 'custom'];
 
 // Simple rate limiting by IP (in-memory, resets on deploy)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -86,6 +86,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Send email notification (non-blocking — submission is already saved)
+    await sendNotificationEmail(submission).catch((err) => {
+      console.error('Email notification failed (submission still saved):', err);
+    });
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('Contact form error:', err);
@@ -93,5 +98,49 @@ export async function POST(request: NextRequest) {
       { error: 'Something went wrong. Please try again.' },
       { status: 500 }
     );
+  }
+}
+
+async function sendNotificationEmail(submission: {
+  name: string;
+  email: string;
+  phone: string | null;
+  business_name: string | null;
+  inquiry_type: string;
+  message: string;
+}) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) return;
+
+  const notifyEmail = process.env.CONTACT_NOTIFY_EMAIL || 'addicted2krypto@gmail.com';
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${resendKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'TechForGyms <onboarding@resend.dev>',
+      to: [notifyEmail],
+      subject: `New ${submission.inquiry_type} inquiry from ${submission.name}`,
+      html: `
+        <h2>New Contact Submission</h2>
+        <table style="border-collapse:collapse;width:100%;max-width:600px;">
+          <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">Name</td><td style="padding:8px;border-bottom:1px solid #eee;">${submission.name}</td></tr>
+          <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">Email</td><td style="padding:8px;border-bottom:1px solid #eee;">${submission.email}</td></tr>
+          ${submission.phone ? `<tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">Phone</td><td style="padding:8px;border-bottom:1px solid #eee;">${submission.phone}</td></tr>` : ''}
+          ${submission.business_name ? `<tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">Company</td><td style="padding:8px;border-bottom:1px solid #eee;">${submission.business_name}</td></tr>` : ''}
+          <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">Type</td><td style="padding:8px;border-bottom:1px solid #eee;">${submission.inquiry_type}</td></tr>
+          <tr><td style="padding:8px;font-weight:bold;border-bottom:1px solid #eee;">Message</td><td style="padding:8px;border-bottom:1px solid #eee;">${submission.message}</td></tr>
+        </table>
+        <p style="margin-top:16px;color:#666;">Reply directly to ${submission.email}</p>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Resend API error: ${response.status} ${errorText}`);
   }
 }
